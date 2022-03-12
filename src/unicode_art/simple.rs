@@ -3,9 +3,13 @@ use super::UnicodeArt;
 use image::io::Reader as ImageReader;
 use image::{DynamicImage, GenericImageView};
 
-const CHAR_LIST_10: &'static str = "@%#*+=-:. ";
-const CHAR_LIST_71: &'static str =
+const CHAR_LIST_STANDARD: &'static str =
     "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/|()1{}[]?-_+~<>i!lI;:,\"^`'. ";
+const CHAR_LIST_LEVELS_10: &'static str = "@%#*+=-:. ";
+const CHAR_LIST_LEVELS_19: &'static str =
+    "BBQROHETI)7ri=+;:,.";
+const CHAR_LIST_LEVELS_16: &'static str =
+    "#8XOHLTI)i=+;:,.";
 
 pub struct SimpleAsciiUnicodeArt {
     char_list: &'static str,
@@ -13,16 +17,23 @@ pub struct SimpleAsciiUnicodeArt {
 }
 
 impl SimpleAsciiUnicodeArt {
-    pub fn new_simple(num_cols: u32) -> Self {
+    pub fn new_level_10(num_cols: u32) -> Self {
         SimpleAsciiUnicodeArt {
-            char_list: CHAR_LIST_10,
+            char_list: CHAR_LIST_LEVELS_10,
             num_cols,
         }
     }
 
-    pub fn new_complex(num_cols: u32) -> Self {
+    pub fn new_standard(num_cols: u32) -> Self {
         SimpleAsciiUnicodeArt {
-            char_list: CHAR_LIST_71,
+            char_list: CHAR_LIST_STANDARD,
+            num_cols,
+        }
+    }
+
+    pub fn new_level_19(num_cols: u32) -> Self {
+        SimpleAsciiUnicodeArt {
+            char_list: CHAR_LIST_LEVELS_19,
             num_cols,
         }
     }
@@ -86,15 +97,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_generate_complex() {
-        let art = SimpleAsciiUnicodeArt::new_complex(80);
-        let _ = art.generate("tests//support/test_gundam.png");
+    fn test_generate_level_19() {
+        let art = SimpleAsciiUnicodeArt::new_level_19(80);
+        let _ = art.generate("tests/support/test_gundam.png");
     }
 
-    #[test]
-    fn test_generate_simple() {
-        let art = SimpleAsciiUnicodeArt::new_simple(80);
-        // let _ = art.generate("test/test_gundam.png");
+    //#[test]
+    fn test_generate_standard() {
+        let art = SimpleAsciiUnicodeArt::new_standard(80);
+        // let _ = art.generate("tests/support/test_gundam.png");
+    }
+
+    //#[test]
+    fn test_generate_level_10() {
+        let art = SimpleAsciiUnicodeArt::new_level_10(80);
+        // let _ = art.generate("tests/support/test_gundam.png");
 
     }
+
 }
