@@ -5,7 +5,7 @@ mod unicode_art;
 use crate::unicode_art::simple::SimpleAsciiUnicodeArt;
 use crate::unicode_art::UnicodeArt;
 
-use std::process::exit;
+use std::{process::exit, io::{stdout, BufWriter}};
 
 use clap::{arg, Arg, Command};
 
@@ -67,13 +67,15 @@ fn main() {
                     "standard" => SimpleAsciiUnicodeArt::new_standard(num_cols),
                     "level_10" => SimpleAsciiUnicodeArt::new_level_10(num_cols),
                     "level_19" => SimpleAsciiUnicodeArt::new_level_19(num_cols),
+                    "level_16" => SimpleAsciiUnicodeArt::new_level_16(num_cols),
                     _ => {
                         eprintln!("Unknown preset");
                         exit(exitcode::USAGE)
                     }
                 },
             );
-            let _ = gen.generate(image_path);
+            let mut buf = BufWriter::new(stdout());
+            let _ = gen.generate(image_path, &mut buf);
         }
         _ => unreachable!(), // If all subcommands are defined above, anything else is unreachabe!()
     }
