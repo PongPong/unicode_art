@@ -47,9 +47,7 @@ impl SimpleAsciiUnicodeArt {
 }
 
 impl UnicodeArt for SimpleAsciiUnicodeArt {
-    fn generate<W: ?Sized>(&self, image_path: &str, writer: &mut W) -> Result<(), UnicodeArtError>
-    where
-        W: Write,
+    fn generate(&self, image_path: &str, writer: &mut dyn Write) -> Result<(), UnicodeArtError>
     {
         let num_chars = self.char_list.len();
         let img = ImageReader::open(image_path)

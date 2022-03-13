@@ -1,3 +1,10 @@
+[profile.release]
+strip = true # stip symbols from binary
+opt-level = "z"
+lto = true # Link time optimization
+codegen-units = 1 # reduce parallel code generation units, 16 by default
+panic = "abort" # abort immediately without unwinding stacktrace
+
 [package]
 name = "unicode-art"
 version = "0.1.0"
@@ -9,3 +16,5 @@ edition = "2021"
 image = "0.24.1"
 clap = { version = "3.1.6", features = ["derive"] }
 exitcode = "1.1.2"
+# tch = "0.6.1"
+pretty_assertions = "1.2.0"
