@@ -1,7 +1,7 @@
 use super::error::UnicodeArtError;
 use super::UnicodeArt;
+use super::mean::Mean;
 use image::io::Reader as ImageReader;
-use image::{DynamicImage, GenericImageView};
 use std::io::Write;
 
 const CHAR_LIST_STANDARD: &'static str =
@@ -44,19 +44,6 @@ impl SimpleAsciiUnicodeArt {
         }
     }
 
-    fn mean(&self, img: &DynamicImage, sx: u32, ex: u32, sy: u32, ey: u32) -> u8 {
-        let sub_image = img.view(sx, sy, ex - sx, ey - sy);
-        let sub_image = sub_image.to_image();
-
-        let len = sub_image.pixels().len();
-        debug_assert_ne!(len, 0);
-        let sum = sub_image.pixels().fold(0u32, |mut sum, &pixel| {
-            let image::Rgba(data) = pixel;
-            sum += data[0] as u32 + data[1] as u32 + data[2] as u32;
-            sum
-        });
-        (sum / 3 / len as u32) as u8
-    }
 }
 
 impl UnicodeArt for SimpleAsciiUnicodeArt {
@@ -88,7 +75,7 @@ impl UnicodeArt for SimpleAsciiUnicodeArt {
                 let ey = height.min((i + 1) * cell_height);
                 let sx = j * cell_width;
                 let ex = width.min((j + 1) * cell_width);
-                let mean = self.mean(&img, sx, ex, sy, ey);
+                let mean = img.mean(sx, ex, sy, ey);
                 // let char_idx = (num_chars - 1).min(mean as usize * num_chars / 255);
                 let char_idx = mean as usize * num_chars / 255;
                 let char = self.char_list.chars().nth(char_idx).unwrap();

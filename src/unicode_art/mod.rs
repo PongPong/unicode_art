@@ -1,5 +1,6 @@
 pub mod error;
 pub mod simple;
+mod mean;
 
 use crate::unicode_art::error::UnicodeArtError;
 use std::io::Write;
