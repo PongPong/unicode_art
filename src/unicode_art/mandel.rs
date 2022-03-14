@@ -6,7 +6,7 @@ pub struct MandelAsciiArt {}
 
 impl MandelAsciiArt {
     pub fn new() -> Self {
-        MandelAsciiArt{}
+        MandelAsciiArt {}
     }
 }
 
@@ -24,8 +24,7 @@ impl UnicodeArt for MandelAsciiArt {
      * }
      * }
      */
-    fn generate(&self, _: &str, writer: &mut dyn Write) -> Result<(), UnicodeArtError>
-    {
+    fn generate(&self, writer: &mut dyn Write) -> Result<(), UnicodeArtError> {
         let mut n;
         for ti in (-100..100).step_by(6) {
             // from -1 to 1 (exclusive)
@@ -67,7 +66,7 @@ mod tests {
     fn test_generate_madel() {
         let art = MandelAsciiArt {};
         let mut buf = BufWriter::new(Vec::new());
-        let _ = art.generate("_", &mut buf);
+        let _ = art.generate(&mut buf);
         let bytes = buf.into_inner().unwrap();
         let actual = String::from_utf8(bytes).unwrap();
         assert_eq!(

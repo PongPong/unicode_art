@@ -3,7 +3,7 @@ use std::io;
 #[derive(Debug)]
 pub enum UnicodeArtError {
     ImageError(image::ImageError),
-    IoError(io::Error)
+    IoError(io::Error),
 }
 
 impl From<image::ImageError> for UnicodeArtError {

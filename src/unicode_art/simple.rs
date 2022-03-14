@@ -1,6 +1,6 @@
 use super::error::UnicodeArtError;
-use super::UnicodeArt;
 use super::mean::Mean;
+use super::UnicodeArt;
 use image::io::Reader as ImageReader;
 use std::io::Write;
 
@@ -10,47 +10,50 @@ const CHAR_LIST_LEVELS_10: &'static str = "@%#*+=-:. ";
 const CHAR_LIST_LEVELS_19: &'static str = "BBQROHETI)7ri=+;:,.";
 const CHAR_LIST_LEVELS_16: &'static str = "#8XOHLTI)i=+;:,.";
 
-pub struct SimpleAsciiUnicodeArt {
+pub struct SimpleAsciiUnicodeArt<'a> {
+    image_path: &'a str,
     char_list: &'static str,
     num_cols: u32,
 }
 
-impl SimpleAsciiUnicodeArt {
-    pub fn new_level_10(num_cols: u32) -> Self {
+impl<'a> SimpleAsciiUnicodeArt<'a> {
+    pub fn new_level_10(num_cols: u32, image_path: &'a str) -> Self {
         SimpleAsciiUnicodeArt {
+            image_path,
             char_list: CHAR_LIST_LEVELS_10,
             num_cols,
         }
     }
 
-    pub fn new_standard(num_cols: u32) -> Self {
+    pub fn new_standard(num_cols: u32, image_path: &'a str) -> Self {
         SimpleAsciiUnicodeArt {
+            image_path,
             char_list: CHAR_LIST_STANDARD,
             num_cols,
         }
     }
 
-    pub fn new_level_19(num_cols: u32) -> Self {
+    pub fn new_level_19(num_cols: u32, image_path: &'a str) -> Self {
         SimpleAsciiUnicodeArt {
+            image_path,
             char_list: CHAR_LIST_LEVELS_19,
             num_cols,
         }
     }
 
-    pub fn new_level_16(num_cols: u32) -> Self {
+    pub fn new_level_16(num_cols: u32, image_path: &'a str) -> Self {
         SimpleAsciiUnicodeArt {
+            image_path,
             char_list: CHAR_LIST_LEVELS_16,
             num_cols,
         }
     }
-
 }
 
-impl UnicodeArt for SimpleAsciiUnicodeArt {
-    fn generate(&self, image_path: &str, writer: &mut dyn Write) -> Result<(), UnicodeArtError>
-    {
+impl<'a> UnicodeArt for SimpleAsciiUnicodeArt<'a> {
+    fn generate(&self, writer: &mut dyn Write) -> Result<(), UnicodeArtError> {
         let num_chars = self.char_list.len();
-        let img = ImageReader::open(image_path)
+        let img = ImageReader::open(self.image_path)
             .map_err(|err| UnicodeArtError::from(err))?
             .decode()
             .map_err(|err| UnicodeArtError::from(err))?;
@@ -93,9 +96,9 @@ mod tests {
 
     #[test]
     fn test_generate_level_19() {
-        let art = SimpleAsciiUnicodeArt::new_level_19(20);
+        let art = SimpleAsciiUnicodeArt::new_level_19(20, "tests/support/test_gundam.png");
         let mut buf = BufWriter::new(Vec::new());
-        let _ = art.generate("tests/support/test_gundam.png", &mut buf);
+        let _ = art.generate(&mut buf);
         let bytes = buf.into_inner().unwrap();
         let actual = String::from_utf8(bytes).unwrap();
         assert_eq!(
@@ -120,9 +123,9 @@ BBBBBBBBBBBBBBBBBBBB
 
     #[test]
     fn test_generate_standard() {
-        let art = SimpleAsciiUnicodeArt::new_standard(20);
+        let art = SimpleAsciiUnicodeArt::new_standard(20, "tests/support/test_gundam.png");
         let mut buf = BufWriter::new(Vec::new());
-        let _ = art.generate("tests/support/test_gundam.png", &mut buf);
+        let _ = art.generate(&mut buf);
         let bytes = buf.into_inner().unwrap();
         let actual = String::from_utf8(bytes).unwrap();
         assert_eq!(
@@ -147,9 +150,9 @@ $$$$$$B$8$$$$$$$$$$$
 
     #[test]
     fn test_generate_level_10() {
-        let art = SimpleAsciiUnicodeArt::new_level_10(20);
+        let art = SimpleAsciiUnicodeArt::new_level_10(20, "tests/support/test_gundam.png");
         let mut buf = BufWriter::new(Vec::new());
-        let _ = art.generate("tests/support/test_gundam.png", &mut buf);
+        let _ = art.generate(&mut buf);
         let bytes = buf.into_inner().unwrap();
         let actual = String::from_utf8(bytes).unwrap();
         assert_eq!(
