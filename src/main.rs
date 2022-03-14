@@ -21,8 +21,8 @@ fn main() {
         .about("A Unicode art generator")
         .subcommand_required(true)
         .arg_required_else_help(true)
-        .allow_external_subcommands(true)
-        .allow_invalid_utf8_for_external_subcommands(true)
+        .allow_external_subcommands(false)
+        .allow_invalid_utf8_for_external_subcommands(false)
         .subcommand(
             Command::new("img2txt")
                 .about("Generate ASCII art from image")
@@ -40,8 +40,8 @@ fn main() {
                 )
                 .arg(
                     Arg::new("NUM_COLS")
-                        .long("num_cols")
-                        .short('c')
+                        .long("width")
+                        .short('w')
                         .help("Number of columns")
                         .takes_value(true)
                         .default_missing_value(DEFAULT_NUM_COLS.to_string().as_str())
@@ -51,22 +51,21 @@ fn main() {
         .subcommand(
             Command::new("pattern")
                 .about("Generate ASCII art pattern")
-                .arg(arg!(<IMAGE_PATH> "Image path"))
                 .arg_required_else_help(true)
                 .arg(
-                    Arg::new("PATTERN")
-                        .long("pattern")
+                    Arg::new("PRESET")
+                        .long("preset")
                         .short('p')
-                        .help("Preset chars list")
+                        .help("Preset pattern")
                         .possible_values(["mandel"])
                         .takes_value(true)
-                        .default_missing_value("standard")
+                        .default_missing_value("mandel")
                         .use_value_delimiter(false),
                 )
                 .arg(
                     Arg::new("NUM_COLS")
-                        .long("num_cols")
-                        .short('c')
+                        .long("width")
+                        .short('w')
                         .help("Number of columns")
                         .takes_value(true)
                         .default_missing_value(DEFAULT_NUM_COLS.to_string().as_str())
@@ -142,7 +141,7 @@ fn main() {
                 exit(exitcode::USAGE)
             }
             let gen = sub_matches
-                .value_of("PATTERN")
+                .value_of("PRESET")
                 .and_then(|name| get_patten_impl(name, num_cols));
 
             if let Some(g) = gen {
@@ -153,6 +152,8 @@ fn main() {
                 exit(exitcode::USAGE)
             }
         }
-        _ => unreachable!(), // If all subcommands are defined above, anything else is unreachabe!()
+        _ => {
+            unreachable!();
+        } // If all subcommands are defined above, anything else is unreachabe!()
     }
 }
