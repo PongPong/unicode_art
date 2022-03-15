@@ -16,7 +16,8 @@ use clap::{arg, Arg, Command};
 const DEFAULT_NUM_COLS: u32 = 80;
 const MIN_NUM_COLS: u32 = 1;
 const ARG_NUM_COLS: &'static str = "NUM_COLS";
-const ARG_NUM_PRESET: &'static str = "PRESET";
+const ARG_PRESET: &'static str = "PRESET";
+const ARG_COLOR: &'static str = "COLOR";
 const SUB_COMMAND_CLASSIC: &'static str = "classic";
 const SUB_COMMAND_BRAILLE: &'static str = "braille";
 const SUB_COMMAND_PATTERN: &'static str = "pattern";
@@ -36,7 +37,7 @@ fn main() {
                 .arg(arg!(<IMAGE_PATH> "Image path"))
                 .arg_required_else_help(true)
                 .arg(
-                    Arg::new(ARG_NUM_PRESET)
+                    Arg::new(ARG_PRESET)
                         .long("preset")
                         .short('p')
                         .help("Preset chars list")
@@ -56,6 +57,13 @@ fn main() {
                         .takes_value(true)
                         .default_value(default_num_cols.as_str())
                         .default_missing_value(default_num_cols.as_str())
+                        .use_value_delimiter(false),
+                )
+                .arg(
+                    Arg::new(ARG_COLOR)
+                        .long("color")
+                        .short('c')
+                        .help("ANSI color output")
                         .use_value_delimiter(false),
                 ),
         )
@@ -90,7 +98,7 @@ fn main() {
                 .about("Generate ASCII art pattern")
                 .arg_required_else_help(true)
                 .arg(
-                    Arg::new(ARG_NUM_PRESET)
+                    Arg::new(ARG_PRESET)
                         .long("preset")
                         .short('p')
                         .help("Preset pattern")
@@ -117,22 +125,23 @@ fn main() {
         name: &str,
         num_cols: u32,
         image_path: &'a str,
+        is_color: bool,
     ) -> Option<Box<dyn UnicodeArt + 'a>> {
         match name {
             "standard" => Some(Box::new(SimpleAsciiUnicodeArt::new_standard(
-                num_cols, image_path,
+                num_cols, image_path, is_color,
             ))),
             "level_10" => Some(Box::new(SimpleAsciiUnicodeArt::new_level_10(
-                num_cols, image_path,
+                num_cols, image_path, is_color,
             ))),
             "level_19" => Some(Box::new(SimpleAsciiUnicodeArt::new_level_19(
-                num_cols, image_path,
+                num_cols, image_path, is_color,
             ))),
             "level_16" => Some(Box::new(SimpleAsciiUnicodeArt::new_level_16(
-                num_cols, image_path,
+                num_cols, image_path, is_color,
             ))),
             "level_23" => Some(Box::new(SimpleAsciiUnicodeArt::new_level_23(
-                num_cols, image_path,
+                num_cols, image_path, is_color,
             ))),
             _ => None,
         }
@@ -151,16 +160,17 @@ fn main() {
             let image_path = sub_matches
                 .value_of("IMAGE_PATH")
                 .expect("Missing image path");
+            let is_color = sub_matches.is_present(ARG_COLOR);
 
             sub_matches
-                .value_of(ARG_NUM_PRESET)
-                .and_then(|name| get_img2_txt_impl(name, num_cols, image_path))
+                .value_of(ARG_PRESET)
+                .and_then(|name| get_img2_txt_impl(name, num_cols, image_path, is_color))
         }
         Some(("pattern", sub_matches)) => {
             let num_cols = sub_matches.num_cols(MIN_NUM_COLS, DEFAULT_NUM_COLS);
 
             sub_matches
-                .value_of(ARG_NUM_PRESET)
+                .value_of(ARG_PRESET)
                 .and_then(|name| get_patten_impl(name, num_cols))
         }
         Some(("braille", sub_matches)) => {
