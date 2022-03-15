@@ -9,6 +9,7 @@ const CHAR_LIST_STANDARD: &'static str =
 const CHAR_LIST_LEVELS_10: &'static str = "@%#*+=-:. ";
 const CHAR_LIST_LEVELS_19: &'static str = "BBQROHETI)7ri=+;:,.";
 const CHAR_LIST_LEVELS_16: &'static str = "#8XOHLTI)i=+;:,.";
+const CHAR_LIST_LEVELS_23: &'static str = "MWNXK0Okxdolc:;,'...   ";
 
 pub struct SimpleAsciiUnicodeArt<'a> {
     image_path: &'a str,
@@ -45,6 +46,14 @@ impl<'a> SimpleAsciiUnicodeArt<'a> {
         SimpleAsciiUnicodeArt {
             image_path,
             char_list: CHAR_LIST_LEVELS_16,
+            num_cols,
+        }
+    }
+
+    pub fn new_level_23(num_cols: u32, image_path: &'a str) -> Self {
+        SimpleAsciiUnicodeArt {
+            image_path,
+            char_list: CHAR_LIST_LEVELS_23,
             num_cols,
         }
     }

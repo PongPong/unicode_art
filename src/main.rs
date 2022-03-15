@@ -16,6 +16,9 @@ use clap::{arg, Arg, Command};
 const DEFAULT_NUM_COLS: u32 = 80;
 const MIN_NUM_COLS: u32 = 1;
 const ARG_NUM_COLS: &'static str = "NUM_COLS";
+const SUB_COMMAND_CLASSIC: &'static str = "classic";
+const SUB_COMMAND_BRAILLE: &'static str = "braille";
+const SUB_COMMAND_PATTERN: &'static str = "pattern";
 
 fn main() {
     let matches = Command::new("unicode_art")
@@ -25,7 +28,7 @@ fn main() {
         .allow_external_subcommands(false)
         .allow_invalid_utf8_for_external_subcommands(false)
         .subcommand(
-            Command::new("classic")
+            Command::new(SUB_COMMAND_CLASSIC)
                 .about("Generate ASCII art from image")
                 .arg(arg!(<IMAGE_PATH> "Image path"))
                 .arg_required_else_help(true)
@@ -34,7 +37,7 @@ fn main() {
                         .long("preset")
                         .short('p')
                         .help("Preset chars list")
-                        .possible_values(["standard", "level_10", "level_16", "level_19"])
+                        .possible_values(["standard", "level_10", "level_16", "level_19", "level_23"])
                         .takes_value(true)
                         .default_missing_value("standard")
                         .use_value_delimiter(false),
@@ -50,7 +53,7 @@ fn main() {
                 ),
         )
         .subcommand(
-            Command::new("braille")
+            Command::new(SUB_COMMAND_BRAILLE)
                 .about("Generate Braille Unicode art from image")
                 .arg(arg!(<IMAGE_PATH> "Image path"))
                 .arg_required_else_help(true)
@@ -74,7 +77,7 @@ fn main() {
                 ),
         )
         .subcommand(
-            Command::new("pattern")
+            Command::new(SUB_COMMAND_PATTERN)
                 .about("Generate ASCII art pattern")
                 .arg_required_else_help(true)
                 .arg(
@@ -117,6 +120,9 @@ fn main() {
             "level_16" => Some(Box::new(SimpleAsciiUnicodeArt::new_level_16(
                 num_cols, image_path,
             ))),
+            "level_23" => Some(Box::new(SimpleAsciiUnicodeArt::new_level_23(
+                num_cols, image_path,
+            ))),
             _ => None,
         }
     }
@@ -129,7 +135,7 @@ fn main() {
     }
 
     let gen = match matches.subcommand() {
-        Some(("img2txt", sub_matches)) => {
+        Some(("classic", sub_matches)) => {
             let num_cols = sub_matches.num_cols(MIN_NUM_COLS, DEFAULT_NUM_COLS);
             let image_path = sub_matches
                 .value_of("IMAGE_PATH")
