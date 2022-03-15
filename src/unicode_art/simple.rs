@@ -66,7 +66,7 @@ impl<'a> UnicodeArt for SimpleAsciiUnicodeArt<'a> {
             .map_err(|err| UnicodeArtError::from(err))?
             .decode()
             .map_err(|err| UnicodeArtError::from(err))?;
-        let img = img.grayscale();
+        // let img = img.grayscale();
         let (width, height) = (img.width(), img.height());
         let mut cell_width = width / self.num_cols as u32;
         let mut cell_height = 2 * cell_width;

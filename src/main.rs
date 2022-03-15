@@ -16,11 +16,14 @@ use clap::{arg, Arg, Command};
 const DEFAULT_NUM_COLS: u32 = 80;
 const MIN_NUM_COLS: u32 = 1;
 const ARG_NUM_COLS: &'static str = "NUM_COLS";
+const ARG_NUM_PRESET: &'static str = "PRESET";
 const SUB_COMMAND_CLASSIC: &'static str = "classic";
 const SUB_COMMAND_BRAILLE: &'static str = "braille";
 const SUB_COMMAND_PATTERN: &'static str = "pattern";
 
 fn main() {
+    let default_threshold = DEFAULT_THRESHOLD.to_string();
+    let default_num_cols = DEFAULT_NUM_COLS.to_string();
     let matches = Command::new("unicode_art")
         .about("A Unicode art generator")
         .subcommand_required(true)
@@ -33,13 +36,16 @@ fn main() {
                 .arg(arg!(<IMAGE_PATH> "Image path"))
                 .arg_required_else_help(true)
                 .arg(
-                    Arg::new("PRESET")
+                    Arg::new(ARG_NUM_PRESET)
                         .long("preset")
                         .short('p')
                         .help("Preset chars list")
-                        .possible_values(["standard", "level_10", "level_16", "level_19", "level_23"])
-                        .takes_value(true)
+                        .default_value("standard")
                         .default_missing_value("standard")
+                        .possible_values([
+                            "standard", "level_10", "level_16", "level_19", "level_23",
+                        ])
+                        .takes_value(true)
                         .use_value_delimiter(false),
                 )
                 .arg(
@@ -48,7 +54,8 @@ fn main() {
                         .short('w')
                         .help("Number of columns")
                         .takes_value(true)
-                        .default_missing_value(DEFAULT_NUM_COLS.to_string().as_str())
+                        .default_value(default_num_cols.as_str())
+                        .default_missing_value(default_num_cols.as_str())
                         .use_value_delimiter(false),
                 ),
         )
@@ -63,7 +70,8 @@ fn main() {
                         .short('t')
                         .help("threshold")
                         .takes_value(true)
-                        .default_missing_value(DEFAULT_THRESHOLD.to_string().as_str())
+                        .default_value(default_threshold.as_str())
+                        .default_missing_value(default_threshold.as_str())
                         .use_value_delimiter(false),
                 )
                 .arg(
@@ -72,7 +80,8 @@ fn main() {
                         .short('w')
                         .help("Number of columns")
                         .takes_value(true)
-                        .default_missing_value(DEFAULT_NUM_COLS.to_string().as_str())
+                        .default_value(default_num_cols.as_str())
+                        .default_missing_value(default_num_cols.as_str())
                         .use_value_delimiter(false),
                 ),
         )
@@ -81,12 +90,13 @@ fn main() {
                 .about("Generate ASCII art pattern")
                 .arg_required_else_help(true)
                 .arg(
-                    Arg::new("PRESET")
+                    Arg::new(ARG_NUM_PRESET)
                         .long("preset")
                         .short('p')
                         .help("Preset pattern")
                         .possible_values(["mandel"])
                         .takes_value(true)
+                        .default_value("mandel")
                         .default_missing_value("mandel")
                         .use_value_delimiter(false),
                 )
@@ -96,7 +106,8 @@ fn main() {
                         .short('w')
                         .help("Number of columns")
                         .takes_value(true)
-                        .default_missing_value(DEFAULT_NUM_COLS.to_string().as_str())
+                        .default_value(default_num_cols.as_str())
+                        .default_missing_value(default_num_cols.as_str())
                         .use_value_delimiter(false),
                 ),
         )
@@ -142,14 +153,14 @@ fn main() {
                 .expect("Missing image path");
 
             sub_matches
-                .value_of("PRESET")
+                .value_of(ARG_NUM_PRESET)
                 .and_then(|name| get_img2_txt_impl(name, num_cols, image_path))
         }
         Some(("pattern", sub_matches)) => {
             let num_cols = sub_matches.num_cols(MIN_NUM_COLS, DEFAULT_NUM_COLS);
 
             sub_matches
-                .value_of("PRESET")
+                .value_of(ARG_NUM_PRESET)
                 .and_then(|name| get_patten_impl(name, num_cols))
         }
         Some(("braille", sub_matches)) => {
