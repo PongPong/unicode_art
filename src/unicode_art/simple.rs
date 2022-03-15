@@ -25,19 +25,19 @@ pub struct SimpleAsciiUnicodeArt<'a> {
 }
 
 impl<'a> SimpleAsciiUnicodeArt<'a> {
-    pub fn new_level_10(num_cols: u32, image_path: &'a str, is_color: bool) -> Self {
+    pub fn new_standard(num_cols: u32, image_path: &'a str, is_color: bool) -> Self {
         Self {
             image_path,
-            char_list: CHAR_LIST_LEVELS_10,
+            char_list: CHAR_LIST_STANDARD,
             num_cols,
             is_color,
         }
     }
 
-    pub fn new_standard(num_cols: u32, image_path: &'a str, is_color: bool) -> Self {
+    pub fn new_level_10(num_cols: u32, image_path: &'a str, is_color: bool) -> Self {
         Self {
             image_path,
-            char_list: CHAR_LIST_STANDARD,
+            char_list: CHAR_LIST_LEVELS_10,
             num_cols,
             is_color,
         }

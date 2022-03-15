@@ -4,6 +4,7 @@ mod arg;
 mod unicode_art;
 
 use crate::arg::{BrailleThreshold, NumColumns};
+use crate::unicode_art::block::BlockUnicodeArt;
 use crate::unicode_art::braille::BrailleAsciiArt;
 use crate::unicode_art::simple::SimpleAsciiUnicodeArt;
 use crate::unicode_art::UnicodeArt;
@@ -44,7 +45,7 @@ fn main() {
                         .default_value("standard")
                         .default_missing_value("standard")
                         .possible_values([
-                            "standard", "level_10", "level_16", "level_19", "level_23",
+                            "standard", "level_10", "level_16", "level_19", "level_23", "block",
                         ])
                         .takes_value(true)
                         .use_value_delimiter(false),
@@ -141,6 +142,9 @@ fn main() {
                 num_cols, image_path, is_color,
             ))),
             "level_23" => Some(Box::new(SimpleAsciiUnicodeArt::new_level_23(
+                num_cols, image_path, is_color,
+            ))),
+            "block" => Some(Box::new(BlockUnicodeArt::new(
                 num_cols, image_path, is_color,
             ))),
             _ => None,
