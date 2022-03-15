@@ -112,16 +112,17 @@ impl<'a> BrailleAsciiArt<'a> {
                 // let pixel = sub_image.to_image().resize_exact(1, 1, FilterType::Triangle);
                 let sub_image = sub_image.to_image();
                 let dots = [
-                    sub_image.get_pixel_checked(0, 0).unwrap_or(padding), // 0
-                    sub_image.get_pixel_checked(0, 1).unwrap_or(padding), // 2
-                    sub_image.get_pixel_checked(0, 2).unwrap_or(padding), // 4
-                    sub_image.get_pixel_checked(1, 0).unwrap_or(padding), // 1
-                    sub_image.get_pixel_checked(1, 1).unwrap_or(padding), // 3
-                    sub_image.get_pixel_checked(1, 2).unwrap_or(padding), // 5
-                    sub_image.get_pixel_checked(0, 3).unwrap_or(padding), // 6
-                    sub_image.get_pixel_checked(1, 3).unwrap_or(padding), // 7
+                    sub_image.get_pixel_checked(0, 0), // 0
+                    sub_image.get_pixel_checked(0, 1), // 2
+                    sub_image.get_pixel_checked(0, 2), // 4
+                    sub_image.get_pixel_checked(1, 0), // 1
+                    sub_image.get_pixel_checked(1, 1), // 3
+                    sub_image.get_pixel_checked(1, 2), // 5
+                    sub_image.get_pixel_checked(0, 3), // 6
+                    sub_image.get_pixel_checked(1, 3), // 7
                 ];
                 let bits = dots
+                    .map(|dot| dot.unwrap_or(padding))
                     // .map(|dot| (dot[0] < self.threshold) as u8);
                     .map(|dot| ((dot[0] as u32 + dot[1] as u32 + dot[2] as u32) / 3) as u8)
                     .map(|grey| {
