@@ -1,7 +1,7 @@
 use super::error::UnicodeArtError;
 use super::UnicodeArt;
 use image::io::Reader as ImageReader;
-use image::{DynamicImage, GenericImageView};
+use image::GenericImageView;
 use std::io::Write;
 
 /// ANSI background colour escapes.
@@ -26,16 +26,22 @@ impl<'a> BlockUnicodeArt<'a> {
             is_color,
         }
     }
-    fn generate_with_color(
-        &self,
-        writer: &mut dyn Write,
-        img: &DynamicImage,
-    ) -> Result<(), UnicodeArtError> {
+}
+
+impl<'a> UnicodeArt for BlockUnicodeArt<'a> {
+    fn generate(&self, writer: &mut dyn Write) -> Result<(), UnicodeArtError> {
+        let img = ImageReader::open(self.image_path)
+            .map_err(|err| UnicodeArtError::from(err))?
+            .decode()
+            .map_err(|err| UnicodeArtError::from(err))?;
         let (width, height) = (img.width(), img.height());
-        let img = img.thumbnail(
+        let mut img = img.thumbnail(
             self.num_cols,
             ((self.num_cols as f64 / width as f64) * height as f64) as u32,
         );
+        if !self.is_color {
+            img = img.grayscale();
+        }
         let (num_rows, num_cols) = (img.height() / 2, img.width());
 
         for y in 0..num_rows {
@@ -61,55 +67,6 @@ impl<'a> BlockUnicodeArt<'a> {
         }
         write!(writer, "{}", ANSI_RESET_ATTRIBUTES)?;
         Ok(())
-    }
-
-    fn generate_with_grayscale(
-        &self,
-        writer: &mut dyn Write,
-        img: &DynamicImage,
-    ) -> Result<(), UnicodeArtError> {
-        let (width, height) = (img.width(), img.height());
-        let img = img
-            .thumbnail(
-                self.num_cols,
-                ((self.num_cols as f64 / width as f64) * height as f64) as u32,
-            )
-            .grayscale();
-        let (num_rows, num_cols) = (img.height() / 2, img.width());
-
-        for y in 0..num_rows {
-            let upper_y = y * 2;
-            let lower_y = upper_y + 1;
-            for x in 0..num_cols {
-                let upper_pixel = img.get_pixel(x, upper_y);
-                let upper_mean = upper_pixel[0];
-                let lower_pixel = img.get_pixel(x, lower_y);
-                let lower_mean = lower_pixel[0];
-                // 24 bits grayscale
-                write!(
-                    writer,
-                    "\x1B[38;2;{};{};{}m\
-                        \x1B[48;2;{};{};{}m\u{2580}", // ▀
-                    upper_mean, upper_mean, upper_mean, lower_mean, lower_mean, lower_mean
-                )?;
-            }
-            writeln!(writer, "{}", ANSI_BG_COLOUR_ESCAPES[0])?;
-        }
-        write!(writer, "{}", ANSI_RESET_ATTRIBUTES)?;
-        Ok(())
-    }
-}
-
-impl<'a> UnicodeArt for BlockUnicodeArt<'a> {
-    fn generate(&self, writer: &mut dyn Write) -> Result<(), UnicodeArtError> {
-        let img = ImageReader::open(self.image_path)
-            .map_err(|err| UnicodeArtError::from(err))?
-            .decode()
-            .map_err(|err| UnicodeArtError::from(err))?;
-        match self.is_color {
-            true => self.generate_with_color(writer, &img),
-            false => self.generate_with_grayscale(writer, &img),
-        }
     }
 }
 
