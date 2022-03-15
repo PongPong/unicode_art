@@ -17,15 +17,23 @@ pub struct BrailleAsciiArt<'a> {
     threshold: u8, // range 0 - 255
     num_cols: u32,
     is_color: bool,
+    is_invert: bool,
 }
 
 impl<'a> BrailleAsciiArt<'a> {
-    pub fn new(num_cols: u32, image_path: &'a str, threshold: u8, is_color: bool) -> Self {
+    pub fn new(
+        num_cols: u32,
+        image_path: &'a str,
+        threshold: u8,
+        is_color: bool,
+        is_invert: bool,
+    ) -> Self {
         BrailleAsciiArt {
             image_path,
             threshold,
             num_cols,
             is_color,
+            is_invert,
         }
     }
 
@@ -61,7 +69,12 @@ impl<'a> BrailleAsciiArt<'a> {
                 let bits = dots
                     // .map(|dot| (dot[0] < self.threshold) as u8);
                     .map(|dot| ((dot[0] as u32 + dot[1] as u32 + dot[2] as u32) / 3) as u8)
-                    .map(|grey| (grey < self.threshold) as u8);
+                    .map(|grey| {
+                        (match grey < self.threshold {
+                            true => !self.is_invert,
+                            false => self.is_invert,
+                        }) as u8
+                    });
                 let dec = bits.iter().rev().fold(0, |acc, &b| acc * 2 + b as u32);
                 // Braille Unicode range starts at U2800 (= 10240 decimal)
                 let char = char::from_u32(dec + 10240).unwrap();
@@ -82,7 +95,10 @@ impl<'a> BrailleAsciiArt<'a> {
         // w: 645, h: 938
         // println!("w: {}, h: {}", width, height);
         let padding = &image::Rgba([0u8; 4]);
-        let backround = &image::Rgba([0u8; 4]);
+        let background = match self.is_invert {
+            true => &image::Rgba([0u8; 4]),
+            false => &image::Rgba([255u8; 4]),
+        };
         for y in (0..height).step_by(Y_DOTS as usize) {
             for x in (0..width).step_by(X_DOTS as usize) {
                 let sub_image = img.view(
@@ -108,7 +124,12 @@ impl<'a> BrailleAsciiArt<'a> {
                 let bits = dots
                     // .map(|dot| (dot[0] < self.threshold) as u8);
                     .map(|dot| ((dot[0] as u32 + dot[1] as u32 + dot[2] as u32) / 3) as u8)
-                    .map(|grey| (grey < self.threshold) as u8);
+                    .map(|grey| {
+                        (match grey < self.threshold {
+                            true => !self.is_invert,
+                            false => self.is_invert,
+                        }) as u8
+                    });
                 let dec = bits.iter().rev().fold(0, |acc, &b| acc * 2 + b as u32);
                 let char = char::from_u32(dec + 10240).unwrap();
 
@@ -117,7 +138,7 @@ impl<'a> BrailleAsciiArt<'a> {
                     "{}{}{}",
                     pixel.get_pixel(0, 0).foreground(),
                     char,
-                    backround.background()
+                    background.background()
                 )?;
             }
             writeln!(writer, "{}", ANSI_BG_COLOUR_ESCAPES[0])?;
@@ -149,7 +170,7 @@ mod tests {
 
     #[test]
     fn test_generate_braille() {
-        let art = BrailleAsciiArt::new(40, "tests/support/test_gundam.png", 12, false);
+        let art = BrailleAsciiArt::new(40, "tests/support/test_gundam.png", 12, false, false);
         let mut buf = BufWriter::new(Vec::new());
         let _ = art.generate(&mut buf);
         let bytes = buf.into_inner().unwrap();

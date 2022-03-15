@@ -19,6 +19,7 @@ const MIN_NUM_COLS: u32 = 1;
 const ARG_NUM_COLS: &'static str = "NUM_COLS";
 const ARG_PRESET: &'static str = "PRESET";
 const ARG_COLOR: &'static str = "COLOR";
+const ARG_INVERT: &'static str = "INVERT";
 const SUB_COMMAND_CLASSIC: &'static str = "classic";
 const SUB_COMMAND_BRAILLE: &'static str = "braille";
 const SUB_COMMAND_PATTERN: &'static str = "pattern";
@@ -98,6 +99,13 @@ fn main() {
                         .long("color")
                         .short('c')
                         .help("ANSI color output")
+                        .use_value_delimiter(false),
+                )
+                .arg(
+                    Arg::new(ARG_INVERT)
+                        .long("invert")
+                        .short('i')
+                        .help("Insert color")
                         .use_value_delimiter(false),
                 ),
         )
@@ -191,8 +199,10 @@ fn main() {
                 .expect("Missing image path");
             let threshold = sub_matches.threshold();
             let is_color = sub_matches.is_present(ARG_COLOR);
+            let is_invert = sub_matches.is_present(ARG_INVERT);
+
             Some(Box::new(BrailleAsciiArt::new(
-                num_cols, image_path, threshold, is_color,
+                num_cols, image_path, threshold, is_color, is_invert,
             )) as Box<dyn UnicodeArt>)
         }
         _ => {
