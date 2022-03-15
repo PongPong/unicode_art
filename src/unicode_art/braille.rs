@@ -1,7 +1,10 @@
 use std::io::Write;
 
-use super::{error::UnicodeArtError, UnicodeArt};
-use image::{io::Reader as ImageReader, GenericImageView};
+use super::color::{ANSI_BG_COLOUR_ESCAPES, ANSI_RESET_ATTRIBUTES};
+use super::{color::AnsiColor, error::UnicodeArtError, UnicodeArt};
+use image::io::Reader as ImageReader;
+use image::DynamicImage;
+use image::{imageops::FilterType, GenericImageView};
 
 // Braille symbol is 2x4 dots
 const X_DOTS: u8 = 2;
@@ -13,57 +16,26 @@ pub struct BrailleAsciiArt<'a> {
     image_path: &'a str,
     threshold: u8, // range 0 - 255
     num_cols: u32,
+    is_color: bool,
 }
 
 impl<'a> BrailleAsciiArt<'a> {
-    pub fn new(num_cols: u32, image_path: &'a str, threshold: u8) -> Self {
+    pub fn new(num_cols: u32, image_path: &'a str, threshold: u8, is_color: bool) -> Self {
         BrailleAsciiArt {
             image_path,
             threshold,
             num_cols,
+            is_color,
         }
     }
-}
 
-fn resize_dimensions(width: u32, height: u32, nwidth: u32, nheight: u32, fill: bool) -> (u32, u32) {
-    let wratio = nwidth as f64 / width as f64;
-    let hratio = nheight as f64 / height as f64;
-
-    let ratio = if fill {
-        f64::max(wratio, hratio)
-    } else {
-        f64::min(wratio, hratio)
-    };
-
-    let nw = 1.max((width as f64 * ratio).round() as u64);
-    let nh = 1.max((height as f64 * ratio).round() as u64);
-
-    if nw > u64::from(u32::MAX) {
-        let ratio = u32::MAX as f64 / width as f64;
-        (u32::MAX, 1.max((height as f64 * ratio).round() as u32))
-    } else if nh > u64::from(u32::MAX) {
-        let ratio = u32::MAX as f64 / height as f64;
-        (1.max((width as f64 * ratio).round() as u32), u32::MAX)
-    } else {
-        (nw as u32, nh as u32)
-    }
-}
-
-impl<'a> UnicodeArt for BrailleAsciiArt<'a> {
-    fn generate(&self, writer: &mut dyn Write) -> Result<(), UnicodeArtError> {
-        let img = ImageReader::open(self.image_path)
-            .map_err(|err| UnicodeArtError::from(err))?
-            .decode()
-            .map_err(|err| UnicodeArtError::from(err))?;
-
-        let (width, height) = resize_dimensions(
-            img.width(),
-            img.height(),
-            self.num_cols * X_DOTS as u32,
-            ::std::u32::MAX,
-            false,
-        );
-        let img = img.thumbnail(width, height);
+    pub fn generate_without_color(
+        &self,
+        img: &DynamicImage,
+        writer: &mut dyn Write,
+    ) -> Result<(), UnicodeArtError> {
+        let height = img.height();
+        let width = img.width();
         // w: 645, h: 938
         // println!("w: {}, h: {}", width, height);
         let padding = &image::Rgba([0u8; 4]);
@@ -87,18 +59,86 @@ impl<'a> UnicodeArt for BrailleAsciiArt<'a> {
                     sub_image.get_pixel_checked(1, 3).unwrap_or(padding), // 7
                 ];
                 let bits = dots
+                    // .map(|dot| (dot[0] < self.threshold) as u8);
                     .map(|dot| ((dot[0] as u32 + dot[1] as u32 + dot[2] as u32) / 3) as u8)
                     .map(|grey| (grey < self.threshold) as u8);
-                let mut dec = 0;
-                for (i, bit_num) in bits.iter().enumerate() {
-                    dec += *bit_num as u32 * u32::pow(2, i as u32)
-                }
+                let dec = bits.iter().rev().fold(0, |acc, &b| acc * 2 + b as u32);
                 // Braille Unicode range starts at U2800 (= 10240 decimal)
-                write!(writer, "{}", char::from_u32(dec + 10240).unwrap())?;
+                let char = char::from_u32(dec + 10240).unwrap();
+                write!(writer, "{}", char)?;
             }
             writeln!(writer)?;
         }
         Ok(())
+    }
+
+    pub fn generate_with_color(
+        &self,
+        img: &DynamicImage,
+        writer: &mut dyn Write,
+    ) -> Result<(), UnicodeArtError> {
+        let height = img.height();
+        let width = img.width();
+        // w: 645, h: 938
+        // println!("w: {}, h: {}", width, height);
+        let padding = &image::Rgba([0u8; 4]);
+        let backround = &image::Rgba([0u8; 4]);
+        for y in (0..height).step_by(Y_DOTS as usize) {
+            for x in (0..width).step_by(X_DOTS as usize) {
+                let sub_image = img.view(
+                    x,
+                    y,
+                    (width - x).min(X_DOTS as u32),
+                    (height - y).min(Y_DOTS as u32),
+                );
+                let pixel =
+                    image::imageops::resize(&sub_image.to_image(), 1, 1, FilterType::CatmullRom);
+                // let pixel = sub_image.to_image().resize_exact(1, 1, FilterType::Triangle);
+                let sub_image = sub_image.to_image();
+                let dots = [
+                    sub_image.get_pixel_checked(0, 0).unwrap_or(padding), // 0
+                    sub_image.get_pixel_checked(0, 1).unwrap_or(padding), // 2
+                    sub_image.get_pixel_checked(0, 2).unwrap_or(padding), // 4
+                    sub_image.get_pixel_checked(1, 0).unwrap_or(padding), // 1
+                    sub_image.get_pixel_checked(1, 1).unwrap_or(padding), // 3
+                    sub_image.get_pixel_checked(1, 2).unwrap_or(padding), // 5
+                    sub_image.get_pixel_checked(0, 3).unwrap_or(padding), // 6
+                    sub_image.get_pixel_checked(1, 3).unwrap_or(padding), // 7
+                ];
+                let bits = dots
+                    // .map(|dot| (dot[0] < self.threshold) as u8);
+                    .map(|dot| ((dot[0] as u32 + dot[1] as u32 + dot[2] as u32) / 3) as u8)
+                    .map(|grey| (grey < self.threshold) as u8);
+                let dec = bits.iter().rev().fold(0, |acc, &b| acc * 2 + b as u32);
+                let char = char::from_u32(dec + 10240).unwrap();
+
+                write!(
+                    writer,
+                    "{}{}{}",
+                    pixel.get_pixel(0, 0).foreground(),
+                    char,
+                    backround.background()
+                )?;
+            }
+            writeln!(writer, "{}", ANSI_BG_COLOUR_ESCAPES[0])?;
+        }
+        write!(writer, "{}", ANSI_RESET_ATTRIBUTES)?;
+        Ok(())
+    }
+}
+
+impl<'a> UnicodeArt for BrailleAsciiArt<'a> {
+    fn generate(&self, writer: &mut dyn Write) -> Result<(), UnicodeArtError> {
+        let img = ImageReader::open(self.image_path)
+            .map_err(|err| UnicodeArtError::from(err))?
+            .decode()
+            .map_err(|err| UnicodeArtError::from(err))?;
+
+        let img = img.thumbnail(self.num_cols * X_DOTS as u32, ::std::u32::MAX);
+        match self.is_color {
+            true => self.generate_with_color(&img, writer),
+            false => self.generate_without_color(&img, writer),
+        }
     }
 }
 
@@ -109,7 +149,7 @@ mod tests {
 
     #[test]
     fn test_generate_braille() {
-        let art = BrailleAsciiArt::new(40, "tests/support/test_gundam.png", 12);
+        let art = BrailleAsciiArt::new(40, "tests/support/test_gundam.png", 12, false);
         let mut buf = BufWriter::new(Vec::new());
         let _ = art.generate(&mut buf);
         let bytes = buf.into_inner().unwrap();

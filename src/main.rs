@@ -92,6 +92,13 @@ fn main() {
                         .default_value(default_num_cols.as_str())
                         .default_missing_value(default_num_cols.as_str())
                         .use_value_delimiter(false),
+                )
+                .arg(
+                    Arg::new(ARG_COLOR)
+                        .long("color")
+                        .short('c')
+                        .help("ANSI color output")
+                        .use_value_delimiter(false),
                 ),
         )
         .subcommand(
@@ -183,10 +190,10 @@ fn main() {
                 .value_of("IMAGE_PATH")
                 .expect("Missing image path");
             let threshold = sub_matches.threshold();
-            Some(
-                Box::new(BrailleAsciiArt::new(num_cols, image_path, threshold))
-                    as Box<dyn UnicodeArt>,
-            )
+            let is_color = sub_matches.is_present(ARG_COLOR);
+            Some(Box::new(BrailleAsciiArt::new(
+                num_cols, image_path, threshold, is_color,
+            )) as Box<dyn UnicodeArt>)
         }
         _ => {
             unreachable!();

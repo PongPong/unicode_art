@@ -1,5 +1,6 @@
 pub mod block;
 pub mod braille;
+mod color;
 pub mod error;
 pub mod mandel;
 mod mean;

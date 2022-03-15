@@ -1,15 +1,9 @@
+use super::color::{AnsiColor, ANSI_BG_COLOUR_ESCAPES, ANSI_RESET_ATTRIBUTES};
 use super::error::UnicodeArtError;
 use super::UnicodeArt;
 use image::io::Reader as ImageReader;
 use image::GenericImageView;
 use std::io::Write;
-
-/// ANSI background colour escapes.
-const ANSI_BG_COLOUR_ESCAPES: [&str; 8] = [
-    "\x1B[40m", "\x1B[41m", "\x1B[42m", "\x1B[43m", "\x1B[44m", "\x1B[45m", "\x1B[46m", "\x1B[47m",
-];
-/// Reset ANSI attributes
-pub static ANSI_RESET_ATTRIBUTES: &str = "\x1B[0m";
 
 #[derive(Default)]
 pub struct BlockUnicodeArt<'a> {
@@ -53,14 +47,9 @@ impl<'a> UnicodeArt for BlockUnicodeArt<'a> {
                 // 24 bits color
                 write!(
                     writer,
-                    "\x1B[38;2;{};{};{}m\
-                        \x1B[48;2;{};{};{}m\u{2580}", // ▀
-                    upper_pixel[0],
-                    upper_pixel[1],
-                    upper_pixel[2],
-                    lower_pixel[0],
-                    lower_pixel[1],
-                    lower_pixel[2]
+                    "{}{}\u{2580}", // ▀
+                    upper_pixel.foreground(),
+                    lower_pixel.background(),
                 )?;
             }
             writeln!(writer, "{}", ANSI_BG_COLOUR_ESCAPES[0])?;

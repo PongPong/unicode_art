@@ -1,3 +1,4 @@
+use super::color::AnsiColor;
 use super::error::UnicodeArtError;
 use super::mean::Mean;
 use super::UnicodeArt;
@@ -83,6 +84,7 @@ impl<'a> SimpleAsciiUnicodeArt<'a> {
         );
         let (num_rows, num_cols) = (img.height() / 2, img.width());
 
+        let backround = &image::Rgba([0u8; 4]);
         for y in 0..num_rows {
             let upper_y = y * 2;
             for x in 0..num_cols {
@@ -94,9 +96,10 @@ impl<'a> SimpleAsciiUnicodeArt<'a> {
                 let char = self.char_list.chars().nth(char_idx).unwrap();
                 write!(
                     writer,
-                    "\x1B[38;2;{};{};{}m{}\
-                        \x1B[48;2;0;0;0m",
-                    upper_pixel[0], upper_pixel[1], upper_pixel[2], char
+                    "{}{}{}",
+                    upper_pixel.foreground(),
+                    char,
+                    backround.background()
                 )?;
             }
             writeln!(writer, "{}", ANSI_BG_COLOUR_ESCAPES[0])?;
