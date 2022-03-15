@@ -18,14 +18,14 @@ const ANSI_BG_COLOUR_ESCAPES: [&str; 8] = [
 ];
 
 #[derive(Default, Clone)]
-pub struct SimpleAsciiUnicodeArt<'a> {
+pub struct ClassicAsciiArt<'a> {
     is_color: bool,
     image_path: &'a str,
     char_list: &'static str,
     num_cols: u32,
 }
 
-impl<'a> SimpleAsciiUnicodeArt<'a> {
+impl<'a> ClassicAsciiArt<'a> {
     pub fn new_standard(num_cols: u32, image_path: &'a str, is_color: bool) -> Self {
         Self {
             image_path,
@@ -143,7 +143,7 @@ impl<'a> SimpleAsciiUnicodeArt<'a> {
     }
 }
 
-impl<'a> UnicodeArt for SimpleAsciiUnicodeArt<'a> {
+impl<'a> UnicodeArt for ClassicAsciiArt<'a> {
     fn generate(&self, writer: &mut dyn Write) -> Result<(), UnicodeArtError> {
         let img = ImageReader::open(self.image_path)
             .map_err(|err| UnicodeArtError::from(err))?
@@ -164,7 +164,7 @@ mod tests {
 
     #[test]
     fn test_generate_level_19() {
-        let art = SimpleAsciiUnicodeArt::new_level_19(20, "tests/support/test_gundam.png", false);
+        let art = ClassicAsciiArt::new_level_19(20, "tests/support/test_gundam.png", false);
         let mut buf = BufWriter::new(Vec::new());
         let _ = art.generate(&mut buf);
         let bytes = buf.into_inner().unwrap();
@@ -191,7 +191,7 @@ BBBBBBBBBBBBBBBBBBBB
 
     #[test]
     fn test_generate_standard() {
-        let art = SimpleAsciiUnicodeArt::new_standard(20, "tests/support/test_gundam.png", false);
+        let art = ClassicAsciiArt::new_standard(20, "tests/support/test_gundam.png", false);
         let mut buf = BufWriter::new(Vec::new());
         let _ = art.generate(&mut buf);
         let bytes = buf.into_inner().unwrap();
@@ -218,7 +218,7 @@ $$$$$$B$8$$$$$$$$$$$
 
     #[test]
     fn test_generate_level_10() {
-        let art = SimpleAsciiUnicodeArt::new_level_10(20, "tests/support/test_gundam.png", false);
+        let art = ClassicAsciiArt::new_level_10(20, "tests/support/test_gundam.png", false);
         let mut buf = BufWriter::new(Vec::new());
         let _ = art.generate(&mut buf);
         let bytes = buf.into_inner().unwrap();

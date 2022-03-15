@@ -1,10 +1,10 @@
 pub mod block;
 pub mod braille;
+pub mod classic;
 mod color;
 pub mod error;
 pub mod mandel;
 mod mean;
-pub mod simple;
 
 use crate::unicode_art::error::UnicodeArtError;
 use std::io::Write;

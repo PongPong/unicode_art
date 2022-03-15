@@ -6,7 +6,7 @@ mod unicode_art;
 use crate::arg::{BrailleThreshold, NumColumns};
 use crate::unicode_art::block::BlockUnicodeArt;
 use crate::unicode_art::braille::BrailleAsciiArt;
-use crate::unicode_art::simple::SimpleAsciiUnicodeArt;
+use crate::unicode_art::classic::ClassicAsciiArt;
 use crate::unicode_art::UnicodeArt;
 use crate::unicode_art::{braille::DEFAULT_THRESHOLD, mandel::MandelAsciiArt};
 
@@ -144,19 +144,19 @@ fn main() {
         is_color: bool,
     ) -> Option<Box<dyn UnicodeArt + 'a>> {
         match name {
-            "standard" => Some(Box::new(SimpleAsciiUnicodeArt::new_standard(
+            "standard" => Some(Box::new(ClassicAsciiArt::new_standard(
                 num_cols, image_path, is_color,
             ))),
-            "level_10" => Some(Box::new(SimpleAsciiUnicodeArt::new_level_10(
+            "level_10" => Some(Box::new(ClassicAsciiArt::new_level_10(
                 num_cols, image_path, is_color,
             ))),
-            "level_19" => Some(Box::new(SimpleAsciiUnicodeArt::new_level_19(
+            "level_19" => Some(Box::new(ClassicAsciiArt::new_level_19(
                 num_cols, image_path, is_color,
             ))),
-            "level_16" => Some(Box::new(SimpleAsciiUnicodeArt::new_level_16(
+            "level_16" => Some(Box::new(ClassicAsciiArt::new_level_16(
                 num_cols, image_path, is_color,
             ))),
-            "level_23" => Some(Box::new(SimpleAsciiUnicodeArt::new_level_23(
+            "level_23" => Some(Box::new(ClassicAsciiArt::new_level_23(
                 num_cols, image_path, is_color,
             ))),
             "block" => Some(Box::new(BlockUnicodeArt::new(
