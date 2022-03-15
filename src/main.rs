@@ -1,20 +1,21 @@
 extern crate exitcode;
 
+mod arg;
 mod unicode_art;
 
-use crate::unicode_art::mandel::MandelAsciiArt;
+use crate::arg::{BrailleThreshold, NumColumns};
+use crate::unicode_art::braille::BrailleAsciiArt;
 use crate::unicode_art::simple::SimpleAsciiUnicodeArt;
 use crate::unicode_art::UnicodeArt;
+use crate::unicode_art::{braille::DEFAULT_THRESHOLD, mandel::MandelAsciiArt};
 
-use std::{
-    io::{stdout, BufWriter},
-    process::exit,
-};
+use std::io::{stdout, BufWriter};
 
 use clap::{arg, Arg, Command};
 
 const DEFAULT_NUM_COLS: u32 = 80;
 const MIN_NUM_COLS: u32 = 1;
+const ARG_NUM_COLS: &'static str = "NUM_COLS";
 
 fn main() {
     let matches = Command::new("unicode_art")
@@ -24,7 +25,7 @@ fn main() {
         .allow_external_subcommands(false)
         .allow_invalid_utf8_for_external_subcommands(false)
         .subcommand(
-            Command::new("img2txt")
+            Command::new("classic")
                 .about("Generate ASCII art from image")
                 .arg(arg!(<IMAGE_PATH> "Image path"))
                 .arg_required_else_help(true)
@@ -39,7 +40,31 @@ fn main() {
                         .use_value_delimiter(false),
                 )
                 .arg(
-                    Arg::new("NUM_COLS")
+                    Arg::new(ARG_NUM_COLS)
+                        .long("width")
+                        .short('w')
+                        .help("Number of columns")
+                        .takes_value(true)
+                        .default_missing_value(DEFAULT_NUM_COLS.to_string().as_str())
+                        .use_value_delimiter(false),
+                ),
+        )
+        .subcommand(
+            Command::new("braille")
+                .about("Generate Braille Unicode art from image")
+                .arg(arg!(<IMAGE_PATH> "Image path"))
+                .arg_required_else_help(true)
+                .arg(
+                    Arg::new("THRESHOLD")
+                        .long("threshold")
+                        .short('t')
+                        .help("threshold")
+                        .takes_value(true)
+                        .default_missing_value(DEFAULT_THRESHOLD.to_string().as_str())
+                        .use_value_delimiter(false),
+                )
+                .arg(
+                    Arg::new(ARG_NUM_COLS)
                         .long("width")
                         .short('w')
                         .help("Number of columns")
@@ -63,7 +88,7 @@ fn main() {
                         .use_value_delimiter(false),
                 )
                 .arg(
-                    Arg::new("NUM_COLS")
+                    Arg::new(ARG_NUM_COLS)
                         .long("width")
                         .short('w')
                         .help("Number of columns")
@@ -103,57 +128,42 @@ fn main() {
         }
     }
 
-    match matches.subcommand() {
+    let gen = match matches.subcommand() {
         Some(("img2txt", sub_matches)) => {
-            let num_cols = sub_matches
-                .value_of("NUM_COLS")
-                .map_or(DEFAULT_NUM_COLS, |val| {
-                    val.parse::<u32>().expect("Invalid num_cols")
-                });
-            if num_cols <= MIN_NUM_COLS {
-                eprintln!("Invalid num_cols");
-                exit(exitcode::USAGE)
-            }
-
+            let num_cols = sub_matches.num_cols(MIN_NUM_COLS, DEFAULT_NUM_COLS);
             let image_path = sub_matches
                 .value_of("IMAGE_PATH")
                 .expect("Missing image path");
 
-            let gen = sub_matches
+            sub_matches
                 .value_of("PRESET")
-                .and_then(|name| get_img2_txt_impl(name, num_cols, image_path));
-            if let Some(g) = gen {
-                let mut buf = BufWriter::new(stdout());
-                let _ = g.generate(&mut buf);
-            } else {
-                eprintln!("invalid preset");
-                exit(exitcode::USAGE)
-            }
+                .and_then(|name| get_img2_txt_impl(name, num_cols, image_path))
         }
         Some(("pattern", sub_matches)) => {
-            let num_cols = sub_matches
-                .value_of("NUM_COLS")
-                .map_or(DEFAULT_NUM_COLS, |val| {
-                    val.parse::<u32>().expect("Invalid num_cols")
-                });
-            if num_cols <= MIN_NUM_COLS {
-                eprintln!("Invalid num_cols");
-                exit(exitcode::USAGE)
-            }
-            let gen = sub_matches
-                .value_of("PRESET")
-                .and_then(|name| get_patten_impl(name, num_cols));
+            let num_cols = sub_matches.num_cols(MIN_NUM_COLS, DEFAULT_NUM_COLS);
 
-            if let Some(g) = gen {
-                let mut buf = BufWriter::new(stdout());
-                let _ = g.generate(&mut buf);
-            } else {
-                eprintln!("invalid pattern");
-                exit(exitcode::USAGE)
-            }
+            sub_matches
+                .value_of("PRESET")
+                .and_then(|name| get_patten_impl(name, num_cols))
+        }
+        Some(("braille", sub_matches)) => {
+            let num_cols = sub_matches.num_cols(MIN_NUM_COLS, DEFAULT_NUM_COLS);
+            let image_path = sub_matches
+                .value_of("IMAGE_PATH")
+                .expect("Missing image path");
+            let threshold = sub_matches.threshold();
+            Some(
+                Box::new(BrailleAsciiArt::new(num_cols, image_path, threshold))
+                    as Box<dyn UnicodeArt>,
+            )
         }
         _ => {
             unreachable!();
-        } // If all subcommands are defined above, anything else is unreachabe!()
+        }
+    };
+
+    if let Some(g) = gen {
+        let mut buf = BufWriter::new(stdout());
+        let _ = g.generate(&mut buf);
     }
 }

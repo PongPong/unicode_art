@@ -1,3 +1,4 @@
+pub mod braille;
 pub mod error;
 pub mod mandel;
 mod mean;
