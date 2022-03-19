@@ -39,7 +39,7 @@ impl<'a> ClassicAsciiArt<'a> {
         }
     }
 
-    pub fn new_level_4_with_num_cols(num_cols: u32, image_path: &'a str, is_color: bool) -> Self {
+    pub fn new_level_4(num_cols: u32, image_path: &'a str, is_color: bool) -> Self {
         Self {
             image_path,
             char_list: CHAR_LIST_LEVELS_4,
@@ -95,21 +95,27 @@ impl<'a> ClassicAsciiArt<'a> {
         img: &DynamicImage,
     ) -> Result<(), UnicodeArtError> {
         let num_chars = self.char_list.len();
-        let num_cols = self.num_cols.unwrap_or(img.width());
-        let (num_cols, num_rows) = SimpleAspectRatio::new_auto_height(num_cols, TermFit::Auto, false)
-            .calculate(img.width(), img.height());
-        let img = img.thumbnail_exact(num_cols, num_rows);
-        let (cell_width, cell_height) = (img.width() / num_cols, img.height() / num_rows);
+        let (num_cols, num_rows) = match (self.num_cols, self.num_rows) {
+            (Some(cols), Some(rows)) => (cols, rows),
+            (Some(cols), None) => SimpleAspectRatio::new_auto_height(cols, TermFit::Auto, false)
+                .calculate(img.width(), img.height()),
+            (None, Some(rows)) => SimpleAspectRatio::new_auto_width(rows, TermFit::Auto, false)
+                .calculate(img.width(), img.height()),
+            _ => (img.width(), img.height()),
+        };
         let background = &image::Rgba([0u8; 4]);
+
+        let x_ratio = (img.width() - 1) as f64 / num_cols as f64;
+        let y_ratio = (img.height() - 1) as f64 / num_rows as f64;
 
         for i in 0..num_rows {
             for j in 0..num_cols {
-                let sy = i * cell_height;
-                let ey = (i + 1) * cell_height;
-                let sx = j * cell_width;
-                let ex = (j + 1) * cell_width;
+                let sy = (i as f64 * y_ratio).round() as u32;
+                let ey = (((i + 1) as f64) * y_ratio).round() as u32;
+                let sx = (j as f64 * x_ratio).round() as u32;
+                let ex = (((j + 1) as f64) * x_ratio).round() as u32;
                 let mean = img.mean(sx, ex, sy, ey);
-                let upper_pixel = img.get_pixel(j, i);
+                let upper_pixel = img.get_pixel(sx, sy);
                 let char_idx = (num_chars - 1).min(mean as usize * num_chars / 255);
                 let char = self.char_list.chars().nth(char_idx).unwrap();
                 write!(
@@ -123,7 +129,7 @@ impl<'a> ClassicAsciiArt<'a> {
             writeln!(writer, "{}", ANSI_BG_COLOUR_ESCAPES[0])?;
         }
         write!(writer, "{}", ANSI_RESET_ATTRIBUTES)?;
-        
+
         Ok(())
     }
 
@@ -133,22 +139,24 @@ impl<'a> ClassicAsciiArt<'a> {
         img: &DynamicImage,
     ) -> Result<(), UnicodeArtError> {
         let num_chars = self.char_list.len();
-        let num_cols = self.num_cols.unwrap_or(img.width());
-        let (num_cols, num_rows) = SimpleAspectRatio::new_auto_height(num_cols, TermFit::Auto, false)
-            .calculate(img.width(), img.height());
-        let cell_width = 1.max(img.width() / num_cols);
-        let cell_height = 1.max(img.height() / num_rows); 
-        let num_cols = num_cols.min(img.width());
-        let num_rows = num_rows.min(img.height());
-        // println!("cell_width = {}, cell_width = {}, num_cols = {}, num_rows = {}, img.width = {}, img.height= {}", 
-        //     cell_width, cell_height, num_cols, num_rows, img.width(), img.height());
+        let (num_cols, num_rows) = match (self.num_cols, self.num_rows) {
+            (Some(cols), Some(rows)) => (cols, rows),
+            (Some(cols), None) => SimpleAspectRatio::new_auto_height(cols, TermFit::Auto, false)
+                .calculate(img.width(), img.height()),
+            (None, Some(rows)) => SimpleAspectRatio::new_auto_width(rows, TermFit::Auto, false)
+                .calculate(img.width(), img.height()),
+            _ => (img.width(), img.height()),
+        };
+
+        let x_ratio = (img.width() - 1) as f64 / num_cols as f64;
+        let y_ratio = (img.height() - 1) as f64 / num_rows as f64;
 
         for i in 0..num_rows {
             for j in 0..num_cols {
-                let sy = i * cell_height;
-                let ey = (i + 1) * cell_height;
-                let sx = j * cell_width;
-                let ex = (j + 1) * cell_width;
+                let sy = (i as f64 * y_ratio).round() as u32;
+                let ey = (((i + 1) as f64) * y_ratio).round() as u32;
+                let sx = (j as f64 * x_ratio).round() as u32;
+                let ex = (((j + 1) as f64) * x_ratio).round() as u32;
                 // println!("sx = {}, sy = {}, ex = {}, ey = {}", sx, sy, ex, ey);
                 let mean = img.mean(sx, ex, sy, ey);
                 let char_idx = (num_chars - 1).min(mean as usize * num_chars / 255);
@@ -191,18 +199,18 @@ mod tests {
         assert_eq!(
             r#"BBBBBBBBBBBBBBBBBBBB
 BBBBBBBBBQQQBBBBBBBB
-BBBBBQBBBBQQBBBBBBBB
+BBBBBQBQBQQQBBBBBBBB
 BBBBQQRQBBBBBRQBQBBB
 BBBRBBQBBBBBBBOBRBBB
-BBQOBBBBBBBBBBBQRQBB
-BBRQRBBBBBQBBQRRQQBB
+BBQRBBBBBBBBBBBBRQBB
+BBRQQBBBBBQBBQRQQQBB
 BBBQRRQRQQRQBQQQRBBB
-BBBBOORBBBBBBBRQBBBB
-BBBBQRBBBQRQBBBBBBBB
-BBBBQRRQBBOBBBBBBBBB
+BBBBHRRBBQBBBBRQBBBB
+BBBBQRQBBQQQBBBBBBBB
+BBBBRORQBBRBBBBBBBBB
 BBBBBBQQBBBBBBBBBBBB
-BBBBQQBBQBBBBBBBBBBB
-BBBBBBBBQBBBBBBBBBBB
+BBBBQBBBBBBBBBBBBBBB
+BBBBBBBBBBBBBBBBBBBB
 BBBBBBBBBBBBBBBBBBBB
 "#,
             actual
@@ -218,20 +226,20 @@ BBBBBBBBBBBBBBBBBBBB
         let actual = String::from_utf8(bytes).unwrap();
 
         assert_eq!(
-            r#"&%$$$$$@8%@$%$$$$B%%
-$W%$$BWW%#oM8%B%B$$$
-$@8%W#8M@M*#W&8B%%$$
-$$&&*okMWB@@@h#&#$$$
-$$Bh@8M8B@$$%$d8k%$$
-$$MbW%&@$$@8$&BMa#$$
-$$a*aB@8M&#88Mka#o$$
-$$@okhMa#ohMBo#ohB$$
-$$$@qbb$$WW&$8b#8$$$
-$$$$*hW8B*a*@$@@$$$$
-$$$8obh#@$bW@@$$$$$$
-$$$&W$*MB&M$%$$$$$$$
-$$&&oMB&M%@$$$$$$$$$
-$$$$$$WBM@$$$$$$$$$$
+            r#"&%$$$$$@8%@$B$$$@B%B
+$W%$$BWW%o*M8%B%B$$$
+$@8%W#8M@M*MW&8B%B$$
+$$&&*ok#&B@@BhM&#$$$
+$$Bh@8#8B@$$%$d&bB$$
+$$MbW%8@$$B8$WBMa#$$
+$$aoo%@8M&#&8Mko*M$$
+$$@okk*a#oaMBoM#b$$$
+$$$@wkh$$M&&@&hMB$$$
+$$$$*hM8%oo*$$@@$$$$
+$$$8aba#$@k&@@$$$$$$
+$$$W&$##&&&@B$$$$$$$
+$$&&*M88W%@$$$$$$$$$
+$$$$$$8BW@$$$$$$$$$$
 $$$$$@@$$$$$$$$$$$$$
 "#,
             actual
@@ -250,17 +258,17 @@ $$$$$@@$$$$$$$$$$$$$
             r#"@@@@@@@@@@@@@@@@@@@@
 @@@@@@@@@%%%@@@@@@@@
 @@@@@%@%@%%%@@@@@@@@
-@@@@%%#%@@@@@%%@%@@@
+@@@@%%%%@@@@@%%@%@@@
 @@@%@@%@@@@@@@#@#@@@
 @@%#@@@@@@@@@@@%%%@@
 @@%%%@@@%@%@@%%%%%@@
-@@@%#%%%%%%%@%%%%@@@
-@@@@###@@@@@@@#%@@@@
-@@@@%%@@@%%%@@@@@@@@
+@@@%%%%%%%%%@%%%#@@@
+@@@@#%%@@%@@@@%%@@@@
+@@@@%%%@@%%%@@@@@@@@
 @@@@%#%%@@#@@@@@@@@@
-@@@@@@%%@@%@@@@@@@@@
-@@@@%%@@%@@@@@@@@@@@
-@@@@@@@@%@@@@@@@@@@@
+@@@@@@%%@@@@@@@@@@@@
+@@@@%%@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@
 @@@@@@@@@@@@@@@@@@@@
 "#,
             actual

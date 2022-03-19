@@ -69,12 +69,21 @@ impl SimpleAspectRatio {
         (width, height)
     }
 
+    pub fn new_auto_width(expect_height: u32, termfit: TermFit, use_border: bool) -> Self {
+        Self {
+            expect_width: None,
+            expect_height: Some(expect_height),
+            termfit,
+            use_border,
+        }
+    }
+
     pub fn new_auto_height(expect_width: u32, termfit: TermFit, use_border: bool) -> Self {
         Self {
-            expect_width:Some(expect_width),
-            expect_height:None,
+            expect_width: Some(expect_width),
+            expect_height: None,
             termfit,
-            use_border
+            use_border,
         }
     }
 

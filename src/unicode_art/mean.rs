@@ -6,7 +6,7 @@ pub trait Mean {
 
 impl Mean for DynamicImage {
     fn mean(&self, sx: u32, ex: u32, sy: u32, ey: u32) -> u8 {
-        let sub_image = self.view(sx, sy, ex - sx, ey - sy);
+        let sub_image = self.view(sx, sy, 1.max(ex - sx), 1.max(ey - sy));
         let sub_image = sub_image.to_image();
 
         let len = sub_image.pixels().len();

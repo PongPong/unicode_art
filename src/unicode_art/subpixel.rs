@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader, BufWriter, Read, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::thread;
 
 use super::classic::ClassicAsciiArt;
@@ -17,6 +17,7 @@ pub struct SubpixelUnicodeArt<'a> {
 }
 
 // TODO: could be replace with lhs.abs_diff(rhs) later on.
+#[inline]
 fn abs_diff(slf: u32, other: u32) -> u32 {
     if slf < other {
         other - slf
@@ -31,24 +32,23 @@ impl<'a> SubpixelUnicodeArt<'a> {
             image_path,
             num_cols,
             letters: &LETTER3,
-            grid_size: 3 
+            grid_size: 3,
         }
     }
 
     /**
      * convert classic ascii with 3210 chars list to subpixel
+     * in: 360 * 136
+     * out: 121 * 46
      */
     fn convert(&self, input: &mut dyn Read, output: &mut dyn Write) -> Result<(), UnicodeArtError> {
         let buf_reader = BufReader::new(input);
         let total_size = self.grid_size * self.grid_size;
-        let mut r = 0;
-        let mut c = 0;
         for lines in &buf_reader.lines().chunks(self.grid_size) {
             let lines: Vec<_> = lines.map(|l| l.unwrap()).collect();
             // each column
             for i in (0..lines[0].len()).step_by(self.grid_size) {
-                let mut block = String::new();
-                c = lines[0].len();
+                let mut block = String::with_capacity(9);
                 for line in lines.iter().rev() {
                     // every 3 rows
                     block.push_str(&line[i..line.len().min(i + self.grid_size)]);
@@ -63,12 +63,11 @@ impl<'a> SubpixelUnicodeArt<'a> {
                     block.chars().map(|b| b.to_digit(10).unwrap()).collect();
                 if let Some(letter) = self.distance(&block_final) {
                     write!(output, "{}", char::from_u32(letter).unwrap())?;
+                    // write!(output, "&#{};", letter)?;
                 }
             }
             writeln!(output)?;
-            r+=1;
         }
-        println!("r = {}, c = {}", r, c);
         Ok(())
     }
 
@@ -77,9 +76,8 @@ impl<'a> SubpixelUnicodeArt<'a> {
 
         for (&key, a) in self.letters.iter() {
             let mut cur_distance = 0;
-            let b = y;
             for (index, &aa) in a.iter().enumerate() {
-                let bb = b[index];
+                let bb = y[index];
                 cur_distance += abs_diff(aa as u32, bb);
             }
             distances.insert(key, cur_distance);
@@ -99,8 +97,7 @@ impl<'a> UnicodeArt for SubpixelUnicodeArt<'a> {
         let image_path = self.image_path.to_string();
         let num_cols = self.num_cols;
         let handler = thread::spawn(move || {
-            let gen =
-                ClassicAsciiArt::new_level_4_with_num_cols(num_cols * 3, image_path.as_str(), false);
+            let gen = ClassicAsciiArt::new_level_4(num_cols * 3, image_path.as_str(), false);
             gen.generate(&mut write)
         });
         let _ = self.convert(&mut read, writer);
@@ -111,11 +108,13 @@ impl<'a> UnicodeArt for SubpixelUnicodeArt<'a> {
 
 #[cfg(test)]
 mod test {
+    use std::io::BufWriter;
+
     use super::*;
 
     #[test]
     fn test_generate_subpixel() {
-        let gen = SubpixelUnicodeArt::new(400, "tests/support/test_gundam.jpeg");
+        let gen = SubpixelUnicodeArt::new(100, "tests/support/test_gundam.jpeg");
         let mut buf = BufWriter::new(Vec::new());
         let _ = gen.generate(&mut buf);
         let bytes = buf.into_inner().unwrap();
@@ -405,6 +404,7 @@ lazy_static! {
         (1008702, [0, 0, 0, 1, 3, 1, 0, 0, 0]),
         (1008693, [1, 2, 1, 1, 2, 1, 0, 1, 1]),
         (8230, [1, 1, 1, 1, 1, 1, 0, 0, 0]),
+        // (32, [1, 1, 1, 1, 1, 1, 0, 0, 0]),
         (1008677, [1, 1, 1, 1, 3, 1, 2, 2, 1]),
         (1008691, [1, 2, 1, 0, 2, 1, 1, 1, 0]),
         (1011763, [0, 2, 1, 0, 2, 0, 0, 0, 0]),
@@ -454,6 +454,7 @@ lazy_static! {
         (1011766, [1, 3, 1, 0, 2, 0, 0, 0, 0]),
         (1012789, [0, 0, 0, 0, 2, 1, 1, 2, 1]),
         (1011757, [0, 1, 0, 0, 0, 0, 0, 0, 0]),
+        // (32, [0, 1, 0, 0, 0, 0, 0, 0, 0]),
         (1008805, [0, 1, 0, 2, 3, 2, 1, 1, 1]),
         (1011761, [0, 3, 1, 0, 2, 0, 0, 0, 0]),
         (1012791, [0, 0, 0, 0, 2, 0, 1, 2, 0]),

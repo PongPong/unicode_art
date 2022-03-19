@@ -7,26 +7,47 @@ use crate::arg::{BrailleThreshold, NumColumns};
 use crate::unicode_art::block::BlockUnicodeArt;
 use crate::unicode_art::braille::BrailleAsciiArt;
 use crate::unicode_art::classic::ClassicAsciiArt;
+use crate::unicode_art::subpixel::SubpixelUnicodeArt;
 use crate::unicode_art::UnicodeArt;
 use crate::unicode_art::{braille::DEFAULT_THRESHOLD, mandel::MandelAsciiArt};
 
 use std::io::{stdout, BufWriter};
 
+use clap::lazy_static::lazy_static;
 use clap::{arg, Arg, Command};
 
-const DEFAULT_NUM_COLS: u32 = 80;
 const MIN_NUM_COLS: u32 = 1;
-const ARG_NUM_COLS: &'static str = "NUM_COLS";
 const ARG_PRESET: &'static str = "PRESET";
-const ARG_COLOR: &'static str = "COLOR";
 const ARG_INVERT: &'static str = "INVERT";
 const SUB_COMMAND_CLASSIC: &'static str = "classic";
 const SUB_COMMAND_BRAILLE: &'static str = "braille";
+const SUB_COMMAND_SUBPIXEL: &'static str = "subpixel";
 const SUB_COMMAND_PATTERN: &'static str = "pattern";
+const DEFAULT_NUM_COLS: u32 = 80;
+
+lazy_static! {
+    static ref DEFAULT_NUM_COLS_STR: String = DEFAULT_NUM_COLS.to_string();
+    static ref DEFAULT_THRESHOLD_STR: String = DEFAULT_THRESHOLD.to_string();
+    static ref ARG_NUM_COLS: Arg<'static> = {
+        Arg::new("NUM_COLS")
+            .long("width")
+            .short('w')
+            .help("Number of columns")
+            .takes_value(true)
+            .default_value(DEFAULT_NUM_COLS_STR.as_str())
+            .default_missing_value(DEFAULT_NUM_COLS_STR.as_str())
+            .use_value_delimiter(false)
+    };
+    static ref ARG_COLOR: Arg<'static> = {
+        Arg::new("COLOR")
+            .long("color")
+            .short('c')
+            .help("ANSI color output")
+            .use_value_delimiter(false)
+    };
+}
 
 fn main() {
-    let default_threshold = DEFAULT_THRESHOLD.to_string();
-    let default_num_cols = DEFAULT_NUM_COLS.to_string();
     let matches = Command::new("unicode_art")
         .about("A Unicode art generator")
         .subcommand_required(true)
@@ -51,23 +72,8 @@ fn main() {
                         .takes_value(true)
                         .use_value_delimiter(false),
                 )
-                .arg(
-                    Arg::new(ARG_NUM_COLS)
-                        .long("width")
-                        .short('w')
-                        .help("Number of columns")
-                        .takes_value(true)
-                        .default_value(default_num_cols.as_str())
-                        .default_missing_value(default_num_cols.as_str())
-                        .use_value_delimiter(false),
-                )
-                .arg(
-                    Arg::new(ARG_COLOR)
-                        .long("color")
-                        .short('c')
-                        .help("ANSI color output")
-                        .use_value_delimiter(false),
-                ),
+                .arg(ARG_NUM_COLS.clone())
+                .arg(ARG_COLOR.clone()),
         )
         .subcommand(
             Command::new(SUB_COMMAND_BRAILLE)
@@ -80,27 +86,27 @@ fn main() {
                         .short('t')
                         .help("threshold")
                         .takes_value(true)
-                        .default_value(default_threshold.as_str())
-                        .default_missing_value(default_threshold.as_str())
+                        .default_value(DEFAULT_THRESHOLD_STR.as_str())
+                        .default_missing_value(DEFAULT_THRESHOLD_STR.as_str())
                         .use_value_delimiter(false),
                 )
+                .arg(ARG_NUM_COLS.clone())
+                .arg(ARG_COLOR.clone())
                 .arg(
-                    Arg::new(ARG_NUM_COLS)
-                        .long("width")
-                        .short('w')
-                        .help("Number of columns")
-                        .takes_value(true)
-                        .default_value(default_num_cols.as_str())
-                        .default_missing_value(default_num_cols.as_str())
+                    Arg::new(ARG_INVERT)
+                        .long("invert")
+                        .short('i')
+                        .help("Insert color")
                         .use_value_delimiter(false),
-                )
-                .arg(
-                    Arg::new(ARG_COLOR)
-                        .long("color")
-                        .short('c')
-                        .help("ANSI color output")
-                        .use_value_delimiter(false),
-                )
+                ),
+        )
+        .subcommand(
+            Command::new(SUB_COMMAND_SUBPIXEL)
+                .about("Generate Subpixel Unicode art from image")
+                .arg(arg!(<IMAGE_PATH> "Image path"))
+                .arg_required_else_help(true)
+                .arg(ARG_NUM_COLS.clone())
+                .arg(ARG_COLOR.clone())
                 .arg(
                     Arg::new(ARG_INVERT)
                         .long("invert")
@@ -124,16 +130,7 @@ fn main() {
                         .default_missing_value("mandel")
                         .use_value_delimiter(false),
                 )
-                .arg(
-                    Arg::new(ARG_NUM_COLS)
-                        .long("width")
-                        .short('w')
-                        .help("Number of columns")
-                        .takes_value(true)
-                        .default_value(default_num_cols.as_str())
-                        .default_missing_value(default_num_cols.as_str())
-                        .use_value_delimiter(false),
-                ),
+                .arg(ARG_NUM_COLS.clone()),
         )
         .get_matches();
 
@@ -162,6 +159,7 @@ fn main() {
             "block" => Some(Box::new(BlockUnicodeArt::new(
                 num_cols, image_path, is_color,
             ))),
+            "subpixel" => Some(Box::new(SubpixelUnicodeArt::new(num_cols, image_path))),
             _ => None,
         }
     }
@@ -179,7 +177,7 @@ fn main() {
             let image_path = sub_matches
                 .value_of("IMAGE_PATH")
                 .expect("Missing image path");
-            let is_color = sub_matches.is_present(ARG_COLOR);
+            let is_color = sub_matches.is_present("COLOR");
 
             sub_matches
                 .value_of(ARG_PRESET)
@@ -198,12 +196,20 @@ fn main() {
                 .value_of("IMAGE_PATH")
                 .expect("Missing image path");
             let threshold = sub_matches.threshold();
-            let is_color = sub_matches.is_present(ARG_COLOR);
+            let is_color = sub_matches.is_present("COLOR");
             let is_invert = sub_matches.is_present(ARG_INVERT);
 
             Some(Box::new(BrailleAsciiArt::new(
                 num_cols, image_path, threshold, is_color, is_invert,
             )) as Box<dyn UnicodeArt>)
+        }
+        Some(("subpixel", sub_matches)) => {
+            let num_cols = sub_matches.num_cols(MIN_NUM_COLS, DEFAULT_NUM_COLS);
+            let image_path = sub_matches
+                .value_of("IMAGE_PATH")
+                .expect("Missing image path");
+
+            Some(Box::new(SubpixelUnicodeArt::new(num_cols, image_path)) as Box<dyn UnicodeArt>)
         }
         _ => {
             unreachable!();
