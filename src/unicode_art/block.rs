@@ -71,8 +71,8 @@ mod tests {
         let mut buf = BufWriter::new(Vec::new());
         let _ = art.generate(&mut buf);
         let bytes = buf.into_inner().unwrap();
-        let actual = String::from_utf8(bytes).unwrap();
-        println!("{}", actual);
+        let _ = String::from_utf8(bytes).unwrap();
+        // println!("{}", actual);
         //         assert_eq!(
         //             r#"BBBBBBBBBBBBBBBBBBBB
         // BBBBBBBBBQQQBBBBBBBB

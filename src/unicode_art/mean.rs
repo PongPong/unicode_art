@@ -10,6 +10,9 @@ impl Mean for DynamicImage {
         let sub_image = sub_image.to_image();
 
         let len = sub_image.pixels().len();
+        if len == 0 {
+            println!("sx = {}, sy = {}, ex = {} , ey = {}", sx, sy, ex, ey);
+        }
         debug_assert_ne!(len, 0);
         let sum = sub_image.pixels().fold(0u32, |mut sum, &pixel| {
             let image::Rgb(data): image::Rgb<u8> = pixel.to_rgb();

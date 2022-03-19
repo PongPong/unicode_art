@@ -16,6 +16,9 @@ edition = "2021"
 image = "0.24.1"
 clap = { version = "3.1.6", features = ["derive"] }
 exitcode = "1.1.2"
+itertools = "0.10.3"
+pipe = "0.4.0"
+
 # tch = "0.6.1"
 [dev-dependencies]
 pretty_assertions = "1.2.0"
