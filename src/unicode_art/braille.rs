@@ -2,9 +2,10 @@ use std::io::Write;
 
 use super::color::{ANSI_BG_COLOUR_ESCAPES, ANSI_RESET_ATTRIBUTES};
 use super::{color::AnsiColor, error::UnicodeArtError, UnicodeArt};
+use clap::lazy_static::lazy_static;
 use image::io::Reader as ImageReader;
-use image::DynamicImage;
 use image::{imageops::FilterType, GenericImageView};
+use image::{DynamicImage, ImageBuffer, Rgba};
 
 // Braille symbol is 2x4 dots
 const X_DOTS: u8 = 2;
@@ -18,6 +19,30 @@ pub struct BrailleAsciiArt<'a> {
     num_cols: u32,
     is_color: bool,
     is_invert: bool,
+}
+
+trait BrailleDot {
+    fn to_dots(&self) -> [&Rgba<u8>; 8];
+}
+
+lazy_static! {
+    static ref PADDING: image::Rgba<u8> = image::Rgba([0u8; 4]);
+}
+
+impl BrailleDot for ImageBuffer<Rgba<u8>, Vec<u8>> {
+    fn to_dots(&self) -> [&Rgba<u8>; 8] {
+        [
+            self.get_pixel_checked(0, 0), // 0
+            self.get_pixel_checked(0, 1), // 2
+            self.get_pixel_checked(0, 2), // 4
+            self.get_pixel_checked(1, 0), // 1
+            self.get_pixel_checked(1, 1), // 3
+            self.get_pixel_checked(1, 2), // 5
+            self.get_pixel_checked(0, 3), // 6
+            self.get_pixel_checked(1, 3), // 7
+        ]
+        .map(|dot| dot.unwrap_or(&PADDING))
+    }
 }
 
 impl<'a> BrailleAsciiArt<'a> {
@@ -44,9 +69,6 @@ impl<'a> BrailleAsciiArt<'a> {
     ) -> Result<(), UnicodeArtError> {
         let height = img.height();
         let width = img.width();
-        // w: 645, h: 938
-        // println!("w: {}, h: {}", width, height);
-        let padding = &image::Rgba([0u8; 4]);
         for y in (0..height).step_by(Y_DOTS as usize) {
             for x in (0..width).step_by(X_DOTS as usize) {
                 let sub_image = img.view(
@@ -56,18 +78,8 @@ impl<'a> BrailleAsciiArt<'a> {
                     (height - y).min(Y_DOTS as u32),
                 );
                 let sub_image = sub_image.to_image();
-                let dots = [
-                    sub_image.get_pixel_checked(0, 0).unwrap_or(padding), // 0
-                    sub_image.get_pixel_checked(0, 1).unwrap_or(padding), // 2
-                    sub_image.get_pixel_checked(0, 2).unwrap_or(padding), // 4
-                    sub_image.get_pixel_checked(1, 0).unwrap_or(padding), // 1
-                    sub_image.get_pixel_checked(1, 1).unwrap_or(padding), // 3
-                    sub_image.get_pixel_checked(1, 2).unwrap_or(padding), // 5
-                    sub_image.get_pixel_checked(0, 3).unwrap_or(padding), // 6
-                    sub_image.get_pixel_checked(1, 3).unwrap_or(padding), // 7
-                ];
+                let dots = sub_image.to_dots();
                 let bits = dots
-                    // .map(|dot| (dot[0] < self.threshold) as u8);
                     .map(|dot| ((dot[0] as u32 + dot[1] as u32 + dot[2] as u32) / 3) as u8)
                     .map(|grey| {
                         (match grey < self.threshold {
@@ -92,9 +104,6 @@ impl<'a> BrailleAsciiArt<'a> {
     ) -> Result<(), UnicodeArtError> {
         let height = img.height();
         let width = img.width();
-        // w: 645, h: 938
-        // println!("w: {}, h: {}", width, height);
-        let padding = &image::Rgba([0u8; 4]);
         let background = match self.is_invert {
             true => &image::Rgba([0u8; 4]),
             false => &image::Rgba([255u8; 4]),
@@ -111,18 +120,8 @@ impl<'a> BrailleAsciiArt<'a> {
                     image::imageops::resize(&sub_image.to_image(), 1, 1, FilterType::CatmullRom);
                 // let pixel = sub_image.to_image().resize_exact(1, 1, FilterType::Triangle);
                 let sub_image = sub_image.to_image();
-                let dots = [
-                    sub_image.get_pixel_checked(0, 0), // 0
-                    sub_image.get_pixel_checked(0, 1), // 2
-                    sub_image.get_pixel_checked(0, 2), // 4
-                    sub_image.get_pixel_checked(1, 0), // 1
-                    sub_image.get_pixel_checked(1, 1), // 3
-                    sub_image.get_pixel_checked(1, 2), // 5
-                    sub_image.get_pixel_checked(0, 3), // 6
-                    sub_image.get_pixel_checked(1, 3), // 7
-                ];
+                let dots = sub_image.to_dots();
                 let bits = dots
-                    .map(|dot| dot.unwrap_or(padding))
                     // .map(|dot| (dot[0] < self.threshold) as u8);
                     .map(|dot| ((dot[0] as u32 + dot[1] as u32 + dot[2] as u32) / 3) as u8)
                     .map(|grey| {
