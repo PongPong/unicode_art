@@ -18,7 +18,6 @@ use clap::{arg, Arg, Command};
 
 const MIN_NUM_COLS: u32 = 1;
 const ARG_PRESET: &'static str = "PRESET";
-const ARG_INVERT: &'static str = "INVERT";
 const SUB_COMMAND_CLASSIC: &'static str = "classic";
 const SUB_COMMAND_BRAILLE: &'static str = "braille";
 const SUB_COMMAND_SUBPIXEL: &'static str = "subpixel";
@@ -43,6 +42,13 @@ lazy_static! {
             .long("color")
             .short('c')
             .help("ANSI color output")
+            .use_value_delimiter(false)
+    };
+    static ref ARG_INVERT: Arg<'static> = {
+        Arg::new("INVERT")
+            .long("invert")
+            .short('i')
+            .help("Insert color")
             .use_value_delimiter(false)
     };
 }
@@ -92,13 +98,7 @@ fn main() {
                 )
                 .arg(ARG_NUM_COLS.clone())
                 .arg(ARG_COLOR.clone())
-                .arg(
-                    Arg::new(ARG_INVERT)
-                        .long("invert")
-                        .short('i')
-                        .help("Insert color")
-                        .use_value_delimiter(false),
-                ),
+                .arg(ARG_INVERT.clone()),
         )
         .subcommand(
             Command::new(SUB_COMMAND_SUBPIXEL)
@@ -107,13 +107,7 @@ fn main() {
                 .arg_required_else_help(true)
                 .arg(ARG_NUM_COLS.clone())
                 .arg(ARG_COLOR.clone())
-                .arg(
-                    Arg::new(ARG_INVERT)
-                        .long("invert")
-                        .short('i')
-                        .help("Insert color")
-                        .use_value_delimiter(false),
-                ),
+                .arg(ARG_INVERT.clone()),
         )
         .subcommand(
             Command::new(SUB_COMMAND_PATTERN)
@@ -196,7 +190,7 @@ fn main() {
                 .expect("Missing image path");
             let threshold = sub_matches.threshold();
             let is_color = sub_matches.is_present("COLOR");
-            let is_invert = sub_matches.is_present(ARG_INVERT);
+            let is_invert = sub_matches.is_present("INVERT");
 
             Some(Box::new(BrailleAsciiArt::new(
                 num_cols, image_path, threshold, is_color, is_invert,
