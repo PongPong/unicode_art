@@ -1,6 +1,7 @@
 use std::io::Write;
 
 use super::color::{ANSI_BG_COLOUR_ESCAPES, ANSI_RESET_ATTRIBUTES};
+use super::UnicodeArtOption;
 use super::{color::AnsiColor, error::UnicodeArtError, UnicodeArt};
 use clap::lazy_static::lazy_static;
 use image::io::Reader as ImageReader;
@@ -13,12 +14,17 @@ const Y_DOTS: u8 = 4;
 
 pub const DEFAULT_THRESHOLD: u8 = 127;
 
-pub struct BrailleAsciiArt<'a> {
+pub struct BrailleAsciiArtOption<'a> {
     image_path: &'a str,
     threshold: u8, // range 0 - 255
     num_cols: u32,
     is_color: bool,
     is_invert: bool,
+}
+
+pub struct BrailleAsciiArt<'a> {
+    options: BrailleAsciiArtOption<'a>,
+    image: DynamicImage,
 }
 
 trait BrailleDot {
@@ -45,7 +51,7 @@ impl BrailleDot for ImageBuffer<Rgba<u8>, Vec<u8>> {
     }
 }
 
-impl<'a> BrailleAsciiArt<'a> {
+impl<'a> BrailleAsciiArtOption<'a> {
     pub fn new(
         num_cols: u32,
         image_path: &'a str,
@@ -53,7 +59,7 @@ impl<'a> BrailleAsciiArt<'a> {
         is_color: bool,
         is_invert: bool,
     ) -> Self {
-        BrailleAsciiArt {
+        Self {
             image_path,
             threshold,
             num_cols,
@@ -61,7 +67,22 @@ impl<'a> BrailleAsciiArt<'a> {
             is_invert,
         }
     }
+}
 
+impl<'a> UnicodeArtOption<'a> for BrailleAsciiArtOption<'a> {
+    fn new_unicode_art(self) -> Result<Box<dyn UnicodeArt + 'a>, UnicodeArtError> {
+        let image = ImageReader::open(self.image_path)
+            .map_err(|err| UnicodeArtError::from(err))?
+            .decode()
+            .map_err(|err| UnicodeArtError::from(err))?;
+        Ok(Box::new(BrailleAsciiArt {
+            options: self,
+            image,
+        }))
+    }
+}
+
+impl<'a> BrailleAsciiArt<'a> {
     pub fn generate_without_color(
         &self,
         img: &DynamicImage,
@@ -82,9 +103,9 @@ impl<'a> BrailleAsciiArt<'a> {
                 let bits = dots
                     .map(|dot| ((dot[0] as u32 + dot[1] as u32 + dot[2] as u32) / 3) as u8)
                     .map(|grey| {
-                        (match grey < self.threshold {
-                            true => !self.is_invert,
-                            false => self.is_invert,
+                        (match grey < self.options.threshold {
+                            true => !self.options.is_invert,
+                            false => self.options.is_invert,
                         }) as u8
                     });
                 let dec = bits.iter().rev().fold(0, |acc, &b| acc * 2 + b as u32);
@@ -104,7 +125,7 @@ impl<'a> BrailleAsciiArt<'a> {
     ) -> Result<(), UnicodeArtError> {
         let height = img.height();
         let width = img.width();
-        let background = match self.is_invert {
+        let background = match self.options.is_invert {
             true => &image::Rgba([0u8; 4]),
             false => &image::Rgba([255u8; 4]),
         };
@@ -125,9 +146,9 @@ impl<'a> BrailleAsciiArt<'a> {
                     // .map(|dot| (dot[0] < self.threshold) as u8);
                     .map(|dot| ((dot[0] as u32 + dot[1] as u32 + dot[2] as u32) / 3) as u8)
                     .map(|grey| {
-                        (match grey < self.threshold {
-                            true => !self.is_invert,
-                            false => self.is_invert,
+                        (match grey < self.options.threshold {
+                            true => !self.options.is_invert,
+                            false => self.options.is_invert,
                         }) as u8
                     });
                 let dec = bits.iter().rev().fold(0, |acc, &b| acc * 2 + b as u32);
@@ -149,14 +170,11 @@ impl<'a> BrailleAsciiArt<'a> {
 }
 
 impl<'a> UnicodeArt for BrailleAsciiArt<'a> {
-    fn generate(&self, writer: &mut dyn Write) -> Result<(), UnicodeArtError> {
-        let img = ImageReader::open(self.image_path)
-            .map_err(|err| UnicodeArtError::from(err))?
-            .decode()
-            .map_err(|err| UnicodeArtError::from(err))?;
-
-        let img = img.thumbnail(self.num_cols * X_DOTS as u32, ::std::u32::MAX);
-        match self.is_color {
+    fn write_all(&self, writer: &mut dyn Write) -> Result<(), UnicodeArtError> {
+        let img = self
+            .image
+            .thumbnail(self.options.num_cols * X_DOTS as u32, ::std::u32::MAX);
+        match self.options.is_color {
             true => self.generate_with_color(&img, writer),
             false => self.generate_without_color(&img, writer),
         }
@@ -170,9 +188,11 @@ mod tests {
 
     #[test]
     fn test_generate_braille() {
-        let art = BrailleAsciiArt::new(40, "tests/support/test_gundam.png", 12, false, false);
+        let art = BrailleAsciiArtOption::new(40, "tests/support/test_gundam.png", 12, false, false)
+            .new_unicode_art()
+            .unwrap();
         let mut buf = BufWriter::new(Vec::new());
-        let _ = art.generate(&mut buf);
+        let _ = art.write_all(&mut buf);
         let bytes = buf.into_inner().unwrap();
         let actual = String::from_utf8(bytes).unwrap();
         assert_eq!(

@@ -1,16 +1,26 @@
 use std::io::Write;
 
-use super::{error::UnicodeArtError, UnicodeArt};
+use super::{error::UnicodeArtError, UnicodeArt, UnicodeArtOption};
 
-pub struct MandelAsciiArt {}
+pub struct MandelAsciiArtOption {}
 
-impl MandelAsciiArt {
+pub struct MandelAsciiArt {
+    _options: MandelAsciiArtOption,
+}
+
+impl<'a> MandelAsciiArtOption {
     pub fn new() -> Self {
-        MandelAsciiArt {}
+        MandelAsciiArtOption {}
     }
 }
 
-impl UnicodeArt for MandelAsciiArt {
+impl<'a> UnicodeArtOption<'a> for MandelAsciiArtOption {
+    fn new_unicode_art(self) -> Result<Box<dyn UnicodeArt + 'a>, UnicodeArtError> {
+        Ok(Box::new(MandelAsciiArt { _options: self }))
+    }
+}
+
+impl<'a> UnicodeArt for MandelAsciiArt {
     /**
      * #include <stdio.h>
      * main(n)
@@ -24,7 +34,7 @@ impl UnicodeArt for MandelAsciiArt {
      * }
      * }
      */
-    fn generate(&self, writer: &mut dyn Write) -> Result<(), UnicodeArtError> {
+    fn write_all(&self, writer: &mut dyn Write) -> Result<(), UnicodeArtError> {
         let mut n;
         for ti in (-100..100).step_by(6) {
             // from -1 to 1 (exclusive)
@@ -64,9 +74,9 @@ mod tests {
 
     #[test]
     fn test_generate_madel() {
-        let art = MandelAsciiArt {};
+        let art = MandelAsciiArtOption {}.new_unicode_art().unwrap();
         let mut buf = BufWriter::new(Vec::new());
-        let _ = art.generate(&mut buf);
+        let _ = art.write_all(&mut buf);
         let bytes = buf.into_inner().unwrap();
         let actual = String::from_utf8(bytes).unwrap();
         assert_eq!(

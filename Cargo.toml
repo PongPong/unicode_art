@@ -22,3 +22,5 @@ pipe = "0.4.0"
 # tch = "0.6.1"
 [dev-dependencies]
 pretty_assertions = "1.2.0"
+fontdue = "0.7.2"
+

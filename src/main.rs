@@ -4,12 +4,14 @@ mod arg;
 mod unicode_art;
 
 use crate::arg::{BrailleThreshold, NumColumns};
-use crate::unicode_art::block::BlockUnicodeArt;
-use crate::unicode_art::braille::BrailleAsciiArt;
-use crate::unicode_art::classic::ClassicAsciiArt;
-use crate::unicode_art::subpixel::SubpixelUnicodeArt;
-use crate::unicode_art::UnicodeArt;
-use crate::unicode_art::{braille::DEFAULT_THRESHOLD, mandel::MandelAsciiArt};
+use crate::unicode_art::block::BlockUnicodeArtOption;
+use crate::unicode_art::braille::BrailleAsciiArtOption;
+use crate::unicode_art::braille::DEFAULT_THRESHOLD;
+use crate::unicode_art::classic::ClassicAsciiArtOption;
+use crate::unicode_art::error::UnicodeArtError;
+use crate::unicode_art::mandel::MandelAsciiArtOption;
+use crate::unicode_art::subpixel::SubpixelUnicodeArtOption;
+use crate::unicode_art::{UnicodeArt, UnicodeArtOption};
 
 use std::io::{stdout, BufWriter};
 
@@ -133,38 +135,35 @@ fn main() {
         num_cols: u32,
         image_path: &'a str,
         is_color: bool,
-    ) -> Option<Box<dyn UnicodeArt + 'a>> {
+    ) -> Result<Box<dyn UnicodeArt + 'a>, UnicodeArtError> {
         match name {
-            "standard" => Some(Box::new(ClassicAsciiArt::new_standard(
-                num_cols, image_path, is_color,
-            ))),
-            "level_10" => Some(Box::new(ClassicAsciiArt::new_level_10(
-                num_cols, image_path, is_color,
-            ))),
-            "level_19" => Some(Box::new(ClassicAsciiArt::new_level_19(
-                num_cols, image_path, is_color,
-            ))),
-            "level_16" => Some(Box::new(ClassicAsciiArt::new_level_16(
-                num_cols, image_path, is_color,
-            ))),
-            "level_23" => Some(Box::new(ClassicAsciiArt::new_level_23(
-                num_cols, image_path, is_color,
-            ))),
-            "block" => Some(Box::new(BlockUnicodeArt::new(
-                num_cols, image_path, is_color,
-            ))),
-            _ => None,
+            "standard" => ClassicAsciiArtOption::new_standard(num_cols, image_path, is_color)
+                .new_unicode_art(),
+            "level_10" => ClassicAsciiArtOption::new_level_10(num_cols, image_path, is_color)
+                .new_unicode_art(),
+            "level_19" => ClassicAsciiArtOption::new_level_19(num_cols, image_path, is_color)
+                .new_unicode_art(),
+            "level_16" => ClassicAsciiArtOption::new_level_16(num_cols, image_path, is_color)
+                .new_unicode_art(),
+            "level_23" => ClassicAsciiArtOption::new_level_23(num_cols, image_path, is_color)
+                .new_unicode_art(),
+            "block" => BlockUnicodeArtOption::new(num_cols, image_path, is_color).new_unicode_art(),
+            _ => Err(UnicodeArtError::UnsupportError),
         }
     }
 
-    fn get_patten_impl(name: &str, _num_cols: u32) -> Option<Box<dyn UnicodeArt>> {
+    fn get_patten_impl<'a>(
+        name: &str,
+        _num_cols: u32,
+    ) -> Result<Box<dyn UnicodeArt + 'a>, UnicodeArtError> {
         match name {
-            "mandel" => Some(Box::new(MandelAsciiArt::new())),
-            _ => None,
+            "mandel" => MandelAsciiArtOption::new().new_unicode_art(),
+            _ => Err(UnicodeArtError::UnsupportError),
         }
     }
 
-    let gen = match matches.subcommand() {
+    let mut buf = BufWriter::new(stdout());
+    let _ = match matches.subcommand() {
         Some(("classic", sub_matches)) => {
             let num_cols = sub_matches.num_cols(MIN_NUM_COLS, DEFAULT_NUM_COLS);
             let image_path = sub_matches
@@ -174,14 +173,18 @@ fn main() {
 
             sub_matches
                 .value_of(ARG_PRESET)
-                .and_then(|name| get_img2_txt_impl(name, num_cols, image_path, is_color))
+                .map_or(Err(UnicodeArtError::UnsupportError), |name| {
+                    get_img2_txt_impl(name, num_cols, image_path, is_color)
+                })
         }
         Some(("pattern", sub_matches)) => {
             let num_cols = sub_matches.num_cols(MIN_NUM_COLS, DEFAULT_NUM_COLS);
 
             sub_matches
                 .value_of(ARG_PRESET)
-                .and_then(|name| get_patten_impl(name, num_cols))
+                .map_or(Err(UnicodeArtError::UnsupportError), |name| {
+                    get_patten_impl(name, num_cols)
+                })
         }
         Some(("braille", sub_matches)) => {
             let num_cols = sub_matches.num_cols(MIN_NUM_COLS, DEFAULT_NUM_COLS);
@@ -192,9 +195,8 @@ fn main() {
             let is_color = sub_matches.is_present("COLOR");
             let is_invert = sub_matches.is_present("INVERT");
 
-            Some(Box::new(BrailleAsciiArt::new(
-                num_cols, image_path, threshold, is_color, is_invert,
-            )) as Box<dyn UnicodeArt>)
+            BrailleAsciiArtOption::new(num_cols, image_path, threshold, is_color, is_invert)
+                .new_unicode_art()
         }
         Some(("subpixel", sub_matches)) => {
             let num_cols = sub_matches.num_cols(MIN_NUM_COLS, DEFAULT_NUM_COLS);
@@ -202,15 +204,12 @@ fn main() {
                 .value_of("IMAGE_PATH")
                 .expect("Missing image path");
 
-            Some(Box::new(SubpixelUnicodeArt::new(num_cols, image_path)) as Box<dyn UnicodeArt>)
+            SubpixelUnicodeArtOption::new(num_cols, image_path).new_unicode_art()
         }
         _ => {
             unreachable!();
         }
-    };
-
-    if let Some(g) = gen {
-        let mut buf = BufWriter::new(stdout());
-        let _ = g.generate(&mut buf);
     }
+    .unwrap()
+    .write_all(&mut buf);
 }

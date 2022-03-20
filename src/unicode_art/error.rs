@@ -2,6 +2,7 @@ use std::io;
 
 #[derive(Debug)]
 pub enum UnicodeArtError {
+    UnsupportError,
     ImageError(image::ImageError),
     IoError(io::Error),
 }

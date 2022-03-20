@@ -2,19 +2,11 @@ use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::thread;
 
-use super::classic::ClassicAsciiArt;
+use super::classic::ClassicAsciiArtOption;
 use super::error::UnicodeArtError;
-use super::UnicodeArt;
+use super::{UnicodeArt, UnicodeArtOption};
 use clap::lazy_static::lazy_static;
 use itertools::Itertools;
-
-#[derive(Debug)]
-pub struct SubpixelUnicodeArt<'a> {
-    image_path: &'a str,
-    num_cols: u32,
-    letters: &'a HashMap<u32, [u8; 9]>,
-    grid_size: usize,
-}
 
 // TODO: could be replace with lhs.abs_diff(rhs) later on.
 #[inline]
@@ -26,7 +18,19 @@ fn abs_diff(slf: u32, other: u32) -> u32 {
     }
 }
 
-impl<'a> SubpixelUnicodeArt<'a> {
+#[derive(Debug)]
+pub struct SubpixelUnicodeArtOption<'a> {
+    image_path: &'a str,
+    num_cols: u32,
+    letters: &'a HashMap<u32, [u8; 9]>,
+    grid_size: usize,
+}
+
+pub struct SubpixelUnicodeArt<'a> {
+    options: SubpixelUnicodeArtOption<'a>,
+}
+
+impl<'a> SubpixelUnicodeArtOption<'a> {
     pub fn new(num_cols: u32, image_path: &'a str) -> Self {
         Self {
             image_path,
@@ -35,7 +39,15 @@ impl<'a> SubpixelUnicodeArt<'a> {
             grid_size: 3,
         }
     }
+}
 
+impl<'a> UnicodeArtOption<'a> for SubpixelUnicodeArtOption<'a> {
+    fn new_unicode_art(self) -> Result<Box<(dyn UnicodeArt + 'a)>, UnicodeArtError> {
+        Ok(Box::new(SubpixelUnicodeArt { options: self }))
+    }
+}
+
+impl<'a> SubpixelUnicodeArt<'a> {
     /**
      * convert classic ascii with 3210 chars list to subpixel
      * in: 360 * 136
@@ -43,17 +55,17 @@ impl<'a> SubpixelUnicodeArt<'a> {
      */
     fn convert(&self, input: &mut dyn Read, output: &mut dyn Write) -> Result<(), UnicodeArtError> {
         let buf_reader = BufReader::new(input);
-        let total_size = self.grid_size * self.grid_size;
-        for lines in &buf_reader.lines().chunks(self.grid_size) {
+        let total_size = self.options.grid_size * self.options.grid_size;
+        for lines in &buf_reader.lines().chunks(self.options.grid_size) {
             let lines: Vec<_> = lines.map(|l| l.unwrap()).collect();
             // each column
-            for i in (0..lines[0].len()).step_by(self.grid_size) {
+            for i in (0..lines[0].len()).step_by(self.options.grid_size) {
                 let mut block = String::with_capacity(9);
                 for line in lines.iter().rev() {
                     // every 3 rows
-                    block.push_str(&line[i..line.len().min(i + self.grid_size)]);
-                    if i + self.grid_size > line.len() {
-                        block.push_str(&"0000000000"[0..i + self.grid_size - line.len()]);
+                    block.push_str(&line[i..line.len().min(i + self.options.grid_size)]);
+                    if i + self.options.grid_size > line.len() {
+                        block.push_str(&"0000000000"[0..i + self.options.grid_size - line.len()]);
                     }
                 }
                 if block.len() < total_size {
@@ -74,7 +86,7 @@ impl<'a> SubpixelUnicodeArt<'a> {
     fn distance<'b>(&self, y: &'b Vec<u32>) -> Option<u32> {
         let mut distances = HashMap::new();
 
-        for (&key, a) in self.letters.iter() {
+        for (&key, a) in self.options.letters.iter() {
             let mut cur_distance = 0;
             for (index, &aa) in a.iter().enumerate() {
                 let bb = y[index];
@@ -92,13 +104,15 @@ impl<'a> SubpixelUnicodeArt<'a> {
 }
 
 impl<'a> UnicodeArt for SubpixelUnicodeArt<'a> {
-    fn generate(&self, writer: &mut dyn Write) -> Result<(), UnicodeArtError> {
+    fn write_all(&self, writer: &mut dyn Write) -> Result<(), UnicodeArtError> {
         let (mut read, mut write) = pipe::pipe();
-        let image_path = self.image_path.to_string();
-        let num_cols = self.num_cols;
+        let image_path = self.options.image_path.to_string();
+        let num_cols = self.options.num_cols;
         let handler = thread::spawn(move || {
-            let gen = ClassicAsciiArt::new_level_4(num_cols * 3, image_path.as_str(), false);
-            gen.generate(&mut write)
+            let _ = ClassicAsciiArtOption::new_level_4(num_cols * 3, image_path.as_str(), false)
+                .new_unicode_art()
+                .unwrap()
+                .write_all(&mut write);
         });
         let _ = self.convert(&mut read, writer);
         let _ = handler.join().expect("error");
@@ -110,17 +124,41 @@ impl<'a> UnicodeArt for SubpixelUnicodeArt<'a> {
 mod test {
     use std::io::BufWriter;
 
+    // use image::RgbImage;
+
     use super::*;
 
     #[test]
     fn test_generate_subpixel() {
-        let gen = SubpixelUnicodeArt::new(100, "tests/support/test_gundam.jpeg");
         let mut buf = BufWriter::new(Vec::new());
-        let _ = gen.generate(&mut buf);
+        let _ = SubpixelUnicodeArtOption::new(100, "tests/support/test_gundam.jpeg")
+            .new_unicode_art()
+            .unwrap()
+            .write_all(&mut buf);
         let bytes = buf.into_inner().unwrap();
         let actual = String::from_utf8(bytes).unwrap();
 
         println!("{}", actual);
+    }
+
+    #[test]
+    fn test_generate_font_matrix() {
+        // Read the font data.
+        let font = include_bytes!(
+            "/Users/clam/Library/Fonts/Hack Bold Italic Nerd Font Complete Mono.ttf"
+        ) as &[u8];
+        // Parse it into the font type.
+        let font = fontdue::Font::from_bytes(font, fontdue::FontSettings::default()).unwrap();
+        // Rasterize and get the layout metrics for the letter 'g' at 17px.
+        let (metrics, bitmap) = font.rasterize('g', 17.0);
+        println!("bitmap = {:?}", bitmap.len());
+        println!("metrics = {:?}", metrics);
+        // let _ =
+        //     RgbImage::from_raw(metrics.width as u32, metrics.height as u32, bitmap).unwrap();
+        // let mut buf = BufWriter::new(bitmap);
+        // let gen = ClassicAsciiArt::new_level_4(3, "tests/support/test_gundam.jpeg", false);
+        // let _ = gen.generate(&mut buf);
+        // DynamicImage::new();
     }
 }
 
