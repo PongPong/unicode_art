@@ -159,7 +159,6 @@ fn main() {
             "block" => Some(Box::new(BlockUnicodeArt::new(
                 num_cols, image_path, is_color,
             ))),
-            "subpixel" => Some(Box::new(SubpixelUnicodeArt::new(num_cols, image_path))),
             _ => None,
         }
     }
