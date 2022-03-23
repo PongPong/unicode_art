@@ -136,19 +136,29 @@ fn main() {
         num_cols: u32,
         image_path: &'a str,
         is_color: bool,
-        is_invert: bool
+        is_invert: bool,
     ) -> Result<Box<dyn UnicodeArt + 'a>, UnicodeArtError> {
         match name {
-            "standard" => ClassicAsciiArtOption::new_standard(num_cols, image_path, is_color, is_invert)
-                .new_unicode_art(),
-            "level_10" => ClassicAsciiArtOption::new_level_10(num_cols, image_path, is_color, is_invert)
-                .new_unicode_art(),
-            "level_19" => ClassicAsciiArtOption::new_level_19(num_cols, image_path, is_color, is_invert)
-                .new_unicode_art(),
-            "level_16" => ClassicAsciiArtOption::new_level_16(num_cols, image_path, is_color, is_invert)
-                .new_unicode_art(),
-            "level_23" => ClassicAsciiArtOption::new_level_23(num_cols, image_path, is_color, is_invert)
-                .new_unicode_art(),
+            "standard" => {
+                ClassicAsciiArtOption::new_standard(num_cols, image_path, is_color, is_invert)
+                    .new_unicode_art()
+            }
+            "level_10" => {
+                ClassicAsciiArtOption::new_level_10(num_cols, image_path, is_color, is_invert)
+                    .new_unicode_art()
+            }
+            "level_19" => {
+                ClassicAsciiArtOption::new_level_19(num_cols, image_path, is_color, is_invert)
+                    .new_unicode_art()
+            }
+            "level_16" => {
+                ClassicAsciiArtOption::new_level_16(num_cols, image_path, is_color, is_invert)
+                    .new_unicode_art()
+            }
+            "level_23" => {
+                ClassicAsciiArtOption::new_level_23(num_cols, image_path, is_color, is_invert)
+                    .new_unicode_art()
+            }
             "block" => BlockUnicodeArtOption::new(num_cols, image_path, is_color).new_unicode_art(),
             _ => Err(UnicodeArtError::UnsupportError),
         }

@@ -239,9 +239,10 @@ mod tests {
 
     #[test]
     fn test_generate_level_19() {
-        let art = ClassicAsciiArtOption::new_level_19(20, "tests/support/test_gundam.png", false, false)
-            .new_unicode_art()
-            .unwrap();
+        let art =
+            ClassicAsciiArtOption::new_level_19(20, "tests/support/test_gundam.png", false, false)
+                .new_unicode_art()
+                .unwrap();
         let mut buf = BufWriter::new(Vec::new());
         let _ = art.write_all(&mut buf);
         let bytes = buf.into_inner().unwrap();
@@ -270,9 +271,10 @@ BBBBBBBBBBBBBBBBBBBB
 
     #[test]
     fn test_generate_standard() {
-        let art = ClassicAsciiArtOption::new_standard(20, "tests/support/test_gundam.png", false, false)
-            .new_unicode_art()
-            .unwrap();
+        let art =
+            ClassicAsciiArtOption::new_standard(20, "tests/support/test_gundam.png", false, false)
+                .new_unicode_art()
+                .unwrap();
         let mut buf = BufWriter::new(Vec::new());
         let _ = art.write_all(&mut buf);
         let bytes = buf.into_inner().unwrap();
@@ -301,9 +303,10 @@ $$$$$@@$$$$$$$$$$$$$
 
     #[test]
     fn test_generate_level_10() {
-        let art = ClassicAsciiArtOption::new_level_10(20, "tests/support/test_gundam.png", false, false)
-            .new_unicode_art()
-            .unwrap();
+        let art =
+            ClassicAsciiArtOption::new_level_10(20, "tests/support/test_gundam.png", false, false)
+                .new_unicode_art()
+                .unwrap();
         let mut buf = BufWriter::new(Vec::new());
         let _ = art.write_all(&mut buf);
         let bytes = buf.into_inner().unwrap();
