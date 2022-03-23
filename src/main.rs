@@ -81,7 +81,8 @@ fn main() {
                         .use_value_delimiter(false),
                 )
                 .arg(ARG_NUM_COLS.clone())
-                .arg(ARG_COLOR.clone()),
+                .arg(ARG_COLOR.clone())
+                .arg(ARG_INVERT.clone()),
         )
         .subcommand(
             Command::new(SUB_COMMAND_BRAILLE)
@@ -135,17 +136,18 @@ fn main() {
         num_cols: u32,
         image_path: &'a str,
         is_color: bool,
+        is_invert: bool
     ) -> Result<Box<dyn UnicodeArt + 'a>, UnicodeArtError> {
         match name {
-            "standard" => ClassicAsciiArtOption::new_standard(num_cols, image_path, is_color)
+            "standard" => ClassicAsciiArtOption::new_standard(num_cols, image_path, is_color, is_invert)
                 .new_unicode_art(),
-            "level_10" => ClassicAsciiArtOption::new_level_10(num_cols, image_path, is_color)
+            "level_10" => ClassicAsciiArtOption::new_level_10(num_cols, image_path, is_color, is_invert)
                 .new_unicode_art(),
-            "level_19" => ClassicAsciiArtOption::new_level_19(num_cols, image_path, is_color)
+            "level_19" => ClassicAsciiArtOption::new_level_19(num_cols, image_path, is_color, is_invert)
                 .new_unicode_art(),
-            "level_16" => ClassicAsciiArtOption::new_level_16(num_cols, image_path, is_color)
+            "level_16" => ClassicAsciiArtOption::new_level_16(num_cols, image_path, is_color, is_invert)
                 .new_unicode_art(),
-            "level_23" => ClassicAsciiArtOption::new_level_23(num_cols, image_path, is_color)
+            "level_23" => ClassicAsciiArtOption::new_level_23(num_cols, image_path, is_color, is_invert)
                 .new_unicode_art(),
             "block" => BlockUnicodeArtOption::new(num_cols, image_path, is_color).new_unicode_art(),
             _ => Err(UnicodeArtError::UnsupportError),
@@ -170,11 +172,12 @@ fn main() {
                 .value_of("IMAGE_PATH")
                 .expect("Missing image path");
             let is_color = sub_matches.is_present("COLOR");
+            let is_invert = sub_matches.is_present("INVERT");
 
             sub_matches
                 .value_of(ARG_PRESET)
                 .map_or(Err(UnicodeArtError::UnsupportError), |name| {
-                    get_img2_txt_impl(name, num_cols, image_path, is_color)
+                    get_img2_txt_impl(name, num_cols, image_path, is_color, is_invert)
                 })
         }
         Some(("pattern", sub_matches)) => {
@@ -203,8 +206,9 @@ fn main() {
             let image_path = sub_matches
                 .value_of("IMAGE_PATH")
                 .expect("Missing image path");
+            let is_invert = sub_matches.is_present("INVERT");
 
-            SubpixelUnicodeArtOption::new(num_cols, image_path).new_unicode_art()
+            SubpixelUnicodeArtOption::new(num_cols, image_path, is_invert).new_unicode_art()
         }
         _ => {
             unreachable!();

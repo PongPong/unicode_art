@@ -7,13 +7,14 @@ use image::io::Reader as ImageReader;
 use image::{DynamicImage, GenericImageView};
 use std::io::Write;
 
-const CHAR_LIST_STANDARD: &'static str =
+pub const CHAR_LIST_STANDARD: &'static str =
     "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/|()1{}[]?-_+~<>i!lI;:,\"^`'. ";
-const CHAR_LIST_LEVELS_10: &'static str = "@%#*+=-:. ";
-const CHAR_LIST_LEVELS_19: &'static str = "BBQROHETI)7ri=+;:,.";
-const CHAR_LIST_LEVELS_16: &'static str = "#8XOHLTI)i=+;:,.";
-const CHAR_LIST_LEVELS_23: &'static str = "MWNXK0Okxdolc:;,'...   ";
-const CHAR_LIST_LEVELS_4: &'static str = "3210";
+pub const CHAR_LIST_LEVELS_10: &'static str = "@%#*+=-:. ";
+pub const CHAR_LIST_LEVELS_19: &'static str = "BBQROHETI)7ri=+;:,.";
+pub const CHAR_LIST_LEVELS_16: &'static str = "#8XOHLTI)i=+;:,.";
+pub const CHAR_LIST_LEVELS_23: &'static str = "MWNXK0Okxdolc:;,'...   ";
+pub const CHAR_LIST_LEVELS_4: &'static str = "3210";
+
 /// ANSI background colour escapes.
 const ANSI_BG_COLOUR_ESCAPES: [&str; 8] = [
     "\x1B[40m", "\x1B[41m", "\x1B[42m", "\x1B[43m", "\x1B[44m", "\x1B[45m", "\x1B[46m", "\x1B[47m",
@@ -21,16 +22,17 @@ const ANSI_BG_COLOUR_ESCAPES: [&str; 8] = [
 
 #[derive(Default, Clone)]
 pub struct ClassicAsciiArtOption<'a> {
-    is_color: bool,
-    image_path: &'a str,
-    char_list: &'a str,
-    num_cols: Option<u32>,
-    num_rows: Option<u32>,
+    pub(crate) is_color: bool,
+    pub(crate) is_invert: bool,
+    pub(crate) image_path: &'a str,
+    pub(crate) char_list: &'a str,
+    pub(crate) num_cols: Option<u32>,
+    pub(crate) num_rows: Option<u32>,
 }
 
 pub struct ClassicAsciiArt<'a> {
-    options: ClassicAsciiArtOption<'a>,
-    image: DynamicImage,
+    pub options: ClassicAsciiArtOption<'a>,
+    pub image: DynamicImage,
 }
 
 impl<'a> ClassicAsciiArt<'a> {
@@ -95,7 +97,10 @@ impl<'a> ClassicAsciiArt<'a> {
                 let sx = (j as f64 * x_ratio).round() as u32;
                 let ex = (((j + 1) as f64) * x_ratio).round() as u32;
                 // println!("sx = {}, sy = {}, ex = {}, ey = {}", sx, sy, ex, ey);
-                let mean = self.image.mean(sx, ex, sy, ey);
+                let mean = match self.options.is_invert {
+                    true => 255 - self.image.mean(sx, ex, sy, ey),
+                    false => self.image.mean(sx, ex, sy, ey),
+                };
                 let char_idx = (num_chars - 1).min(mean as usize * num_chars / 255);
                 let char = self.options.char_list.chars().nth(char_idx).unwrap();
                 write!(writer, "{}", char)?
@@ -120,63 +125,99 @@ impl<'a> UnicodeArtOption<'a> for ClassicAsciiArtOption<'a> {
 }
 
 impl<'a> ClassicAsciiArtOption<'a> {
-    pub fn new_standard(num_cols: u32, image_path: &'a str, is_color: bool) -> Self {
+    pub fn new_standard(
+        num_cols: u32,
+        image_path: &'a str,
+        is_color: bool,
+        is_invert: bool,
+    ) -> Self {
         Self {
             image_path,
             char_list: CHAR_LIST_STANDARD,
             num_cols: Some(num_cols),
             num_rows: None,
             is_color,
+            is_invert,
         }
     }
 
-    pub fn new_level_4(num_cols: u32, image_path: &'a str, is_color: bool) -> Self {
+    pub fn new_level_4(
+        num_cols: u32,
+        image_path: &'a str,
+        is_color: bool,
+        is_invert: bool,
+    ) -> Self {
         Self {
             image_path,
             char_list: CHAR_LIST_LEVELS_4,
             num_cols: Some(num_cols),
             num_rows: None,
             is_color,
+            is_invert,
         }
     }
 
-    pub fn new_level_10(num_cols: u32, image_path: &'a str, is_color: bool) -> Self {
+    pub fn new_level_10(
+        num_cols: u32,
+        image_path: &'a str,
+        is_color: bool,
+        is_invert: bool,
+    ) -> Self {
         Self {
             image_path,
             char_list: CHAR_LIST_LEVELS_10,
             num_cols: Some(num_cols),
             num_rows: None,
             is_color,
+            is_invert,
         }
     }
 
-    pub fn new_level_19(num_cols: u32, image_path: &'a str, is_color: bool) -> Self {
+    pub fn new_level_19(
+        num_cols: u32,
+        image_path: &'a str,
+        is_color: bool,
+        is_invert: bool,
+    ) -> Self {
         Self {
             image_path,
             char_list: CHAR_LIST_LEVELS_19,
             num_cols: Some(num_cols),
             num_rows: None,
             is_color,
+            is_invert,
         }
     }
 
-    pub fn new_level_16(num_cols: u32, image_path: &'a str, is_color: bool) -> Self {
+    pub fn new_level_16(
+        num_cols: u32,
+        image_path: &'a str,
+        is_color: bool,
+        is_invert: bool,
+    ) -> Self {
         Self {
             image_path,
             char_list: CHAR_LIST_LEVELS_16,
             num_cols: Some(num_cols),
             num_rows: None,
             is_color,
+            is_invert,
         }
     }
 
-    pub fn new_level_23(num_cols: u32, image_path: &'a str, is_color: bool) -> Self {
+    pub fn new_level_23(
+        num_cols: u32,
+        image_path: &'a str,
+        is_color: bool,
+        is_invert: bool,
+    ) -> Self {
         Self {
             image_path,
             char_list: CHAR_LIST_LEVELS_23,
             num_cols: Some(num_cols),
             num_rows: None,
             is_color,
+            is_invert,
         }
     }
 }
@@ -198,7 +239,7 @@ mod tests {
 
     #[test]
     fn test_generate_level_19() {
-        let art = ClassicAsciiArtOption::new_level_19(20, "tests/support/test_gundam.png", false)
+        let art = ClassicAsciiArtOption::new_level_19(20, "tests/support/test_gundam.png", false, false)
             .new_unicode_art()
             .unwrap();
         let mut buf = BufWriter::new(Vec::new());
@@ -229,7 +270,7 @@ BBBBBBBBBBBBBBBBBBBB
 
     #[test]
     fn test_generate_standard() {
-        let art = ClassicAsciiArtOption::new_standard(20, "tests/support/test_gundam.png", false)
+        let art = ClassicAsciiArtOption::new_standard(20, "tests/support/test_gundam.png", false, false)
             .new_unicode_art()
             .unwrap();
         let mut buf = BufWriter::new(Vec::new());
@@ -260,7 +301,7 @@ $$$$$@@$$$$$$$$$$$$$
 
     #[test]
     fn test_generate_level_10() {
-        let art = ClassicAsciiArtOption::new_level_10(20, "tests/support/test_gundam.png", false)
+        let art = ClassicAsciiArtOption::new_level_10(20, "tests/support/test_gundam.png", false, false)
             .new_unicode_art()
             .unwrap();
         let mut buf = BufWriter::new(Vec::new());
