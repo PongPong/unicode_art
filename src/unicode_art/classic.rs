@@ -200,14 +200,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_generate_level_19() {
+    fn test_generate_level_19() -> Result<(), UnicodeArtError> {
         let image_path = "tests/support/test_gundam.png";
-        let image = ImageReader::open(image_path);
-        let art = ClassicAsciiArtOption::new_level_19(20, false, false)
-            .new_unicode_art(&image.unwrap().decode().unwrap())
-            .unwrap();
+        let image = ImageReader::open(image_path)?.decode()?;
+        let opt = ClassicAsciiArtOption::new_level_19(20, false, false);
+        let art = opt.new_unicode_art(&image)?;
         let mut buf = BufWriter::new(Vec::new());
-        let _ = art.write_all(&mut buf);
+        art.write_all(&mut buf)?;
         let bytes = buf.into_inner().unwrap();
         let actual = String::from_utf8(bytes).unwrap();
 
@@ -230,17 +229,17 @@ BBBBBBBBBBBBBBBBBBBB
 "#,
             actual
         );
+        Ok(())
     }
 
     #[test]
-    fn test_generate_standard() {
+    fn test_generate_standard() -> Result<(), UnicodeArtError> {
         let image_path = "tests/support/test_gundam.png";
-        let image = ImageReader::open(image_path);
-        let art = ClassicAsciiArtOption::new_standard(20, false, false)
-            .new_unicode_art(&image.unwrap().decode().unwrap())
-            .unwrap();
+        let image = ImageReader::open(image_path)?.decode()?;
+        let opt = ClassicAsciiArtOption::new_standard(20, false, false);
+        let art = opt.new_unicode_art(&image)?;
         let mut buf = BufWriter::new(Vec::new());
-        let _ = art.write_all(&mut buf);
+        art.write_all(&mut buf)?;
         let bytes = buf.into_inner().unwrap();
         let actual = String::from_utf8(bytes).unwrap();
 
@@ -263,17 +262,17 @@ $$$$$@@$$$$$$$$$$$$$
 "#,
             actual
         );
+        Ok(())
     }
 
     #[test]
-    fn test_generate_level_10() {
+    fn test_generate_level_10() -> Result<(), UnicodeArtError> {
         let image_path = "tests/support/test_gundam.png";
-        let image = ImageReader::open(image_path);
-        let art = ClassicAsciiArtOption::new_level_10(20, false, false)
-            .new_unicode_art(&image.unwrap().decode().unwrap())
-            .unwrap();
+        let image = ImageReader::open(image_path)?.decode()?;
+        let opt = ClassicAsciiArtOption::new_level_10(20, false, false);
+        let art = opt.new_unicode_art(&image)?;
         let mut buf = BufWriter::new(Vec::new());
-        let _ = art.write_all(&mut buf);
+        let _ = art.write_all(&mut buf)?;
         let bytes = buf.into_inner().unwrap();
         let actual = String::from_utf8(bytes).unwrap();
 
@@ -296,5 +295,6 @@ $$$$$@@$$$$$$$$$$$$$
 "#,
             actual
         );
+        Ok(())
     }
 }

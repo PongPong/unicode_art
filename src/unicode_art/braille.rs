@@ -179,14 +179,13 @@ mod tests {
     use std::io::BufWriter;
 
     #[test]
-    fn test_generate_braille() {
+    fn test_generate_braille() -> Result<(), UnicodeArtError> {
         let image_path = "tests/support/test_gundam.png";
-        let image = Reader::open(image_path);
-        let art = BrailleAsciiArtOption::new(40, 12, false, false)
-            .new_unicode_art(&image.unwrap().decode().unwrap())
-            .unwrap();
+        let image = Reader::open(image_path)?.decode()?;
+        let opt = BrailleAsciiArtOption::new(40, 12, false, false);
+        let art = opt.new_unicode_art(&image)?;
         let mut buf = BufWriter::new(Vec::new());
-        let _ = art.write_all(&mut buf);
+        art.write_all(&mut buf)?;
         let bytes = buf.into_inner().unwrap();
         let actual = String::from_utf8(bytes).unwrap();
         assert_eq!(
@@ -222,5 +221,6 @@ mod tests {
 "#,
             actual
         );
+        Ok(())
     }
 }

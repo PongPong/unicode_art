@@ -74,14 +74,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_generate_level_19() {
+    fn test_generate_level_19() -> Result<(), UnicodeArtError> {
         let image_path = "tests/support/test_gundam.png";
-        let image = Reader::open(image_path).unwrap();
-        let art = BlockUnicodeArtOption::new(20, false)
-            .new_unicode_art(&image.decode().unwrap())
-            .unwrap();
+        let image = Reader::open(image_path)?.decode()?;
+        let opt = BlockUnicodeArtOption::new(20, false);
+        let art = opt.new_unicode_art(&image)?;
         let mut buf = BufWriter::new(Vec::new());
-        let _ = art.write_all(&mut buf);
+        art.write_all(&mut buf)?;
         let bytes = buf.into_inner().unwrap();
         let _ = String::from_utf8(bytes).unwrap();
         // println!("{}", actual);
@@ -103,5 +102,6 @@ mod tests {
         // "#,
         //     actual
         // );
+        Ok(())
     }
 }
