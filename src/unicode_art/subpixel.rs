@@ -6,6 +6,7 @@ use super::classic::ClassicAsciiArtOption;
 use super::error::UnicodeArtError;
 use super::{UnicodeArt, UnicodeArtOption};
 use clap::lazy_static::lazy_static;
+use image::DynamicImage;
 use itertools::Itertools;
 
 // TODO: could be replace with lhs.abs_diff(rhs) later on.
@@ -20,7 +21,6 @@ fn abs_diff(slf: u32, other: u32) -> u32 {
 
 #[derive(Debug)]
 pub struct SubpixelUnicodeArtOption<'a> {
-    image_path: &'a str,
     num_cols: u32,
     letters: &'a HashMap<u32, [u8; 9]>,
     grid_size: usize,
@@ -28,13 +28,13 @@ pub struct SubpixelUnicodeArtOption<'a> {
 }
 
 pub struct SubpixelUnicodeArt<'a> {
-    options: SubpixelUnicodeArtOption<'a>,
+    options: &'a SubpixelUnicodeArtOption<'a>,
+    image: &'a DynamicImage,
 }
 
 impl<'a> SubpixelUnicodeArtOption<'a> {
-    pub fn new(num_cols: u32, image_path: &'a str, is_invert: bool) -> Self {
+    pub fn new(num_cols: u32, is_invert: bool) -> Self {
         Self {
-            image_path,
             num_cols,
             letters: &LETTER3,
             grid_size: 3,
@@ -43,9 +43,15 @@ impl<'a> SubpixelUnicodeArtOption<'a> {
     }
 }
 
-impl<'a> UnicodeArtOption<'a> for SubpixelUnicodeArtOption<'a> {
-    fn new_unicode_art(self) -> Result<Box<(dyn UnicodeArt + 'a)>, UnicodeArtError> {
-        Ok(Box::new(SubpixelUnicodeArt { options: self }))
+impl UnicodeArtOption for SubpixelUnicodeArtOption<'static> {
+    fn new_unicode_art<'a>(
+        &'a self,
+        image: &'a DynamicImage,
+    ) -> Result<Box<(dyn UnicodeArt + 'a)>, UnicodeArtError> {
+        Ok(Box::new(SubpixelUnicodeArt {
+            options: self,
+            image,
+        }))
     }
 }
 
@@ -108,19 +114,14 @@ impl<'a> SubpixelUnicodeArt<'a> {
 impl<'a> UnicodeArt for SubpixelUnicodeArt<'a> {
     fn write_all(&self, writer: &mut dyn Write) -> Result<(), UnicodeArtError> {
         let (mut read, mut write) = pipe::pipe();
-        let image_path = self.options.image_path.to_string();
         let num_cols = self.options.num_cols;
         let is_invert = self.options.is_invert;
+        let image = self.image.clone();
         let handler = thread::spawn(move || {
-            let _ = ClassicAsciiArtOption::new_level_4(
-                num_cols * 3,
-                image_path.as_str(),
-                false,
-                is_invert,
-            )
-            .new_unicode_art()
-            .unwrap()
-            .write_all(&mut write);
+            let _ = ClassicAsciiArtOption::new_level_4(num_cols * 3, false, is_invert)
+                .new_unicode_art(&image)
+                .unwrap()
+                .write_all(&mut write);
         });
         let _ = self.convert(&mut read, writer);
         let _ = handler.join().expect("error");

@@ -1,11 +1,13 @@
 use std::io::Write;
 
+use image::DynamicImage;
+
 use super::{error::UnicodeArtError, UnicodeArt, UnicodeArtOption};
 
 pub struct MandelAsciiArtOption {}
 
-pub struct MandelAsciiArt {
-    _options: MandelAsciiArtOption,
+pub struct MandelAsciiArt<'a> {
+    _options: &'a MandelAsciiArtOption,
 }
 
 impl<'a> MandelAsciiArtOption {
@@ -14,13 +16,16 @@ impl<'a> MandelAsciiArtOption {
     }
 }
 
-impl<'a> UnicodeArtOption<'a> for MandelAsciiArtOption {
-    fn new_unicode_art(self) -> Result<Box<dyn UnicodeArt + 'a>, UnicodeArtError> {
+impl UnicodeArtOption for MandelAsciiArtOption {
+    fn new_unicode_art<'a>(
+        &'a self,
+        _image: &'a DynamicImage,
+    ) -> Result<Box<dyn UnicodeArt + 'a>, UnicodeArtError> {
         Ok(Box::new(MandelAsciiArt { _options: self }))
     }
 }
 
-impl<'a> UnicodeArt for MandelAsciiArt {
+impl<'a> UnicodeArt for MandelAsciiArt<'a> {
     /**
      * #include <stdio.h>
      * main(n)
@@ -69,12 +74,14 @@ impl<'a> UnicodeArt for MandelAsciiArt {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use image::RgbImage;
     use pretty_assertions::assert_eq;
     use std::io::BufWriter;
 
     #[test]
     fn test_generate_madel() {
-        let art = MandelAsciiArtOption {}.new_unicode_art().unwrap();
+        let image = DynamicImage::ImageRgb8(RgbImage::new(1, 1));
+        let art = MandelAsciiArtOption {}.new_unicode_art(&image).unwrap();
         let mut buf = BufWriter::new(Vec::new());
         let _ = art.write_all(&mut buf);
         let bytes = buf.into_inner().unwrap();

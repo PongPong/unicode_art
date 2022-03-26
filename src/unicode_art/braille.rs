@@ -4,7 +4,6 @@ use super::color::{ANSI_BG_COLOUR_ESCAPES, ANSI_RESET_ATTRIBUTES};
 use super::UnicodeArtOption;
 use super::{color::AnsiColor, error::UnicodeArtError, UnicodeArt};
 use clap::lazy_static::lazy_static;
-use image::io::Reader as ImageReader;
 use image::{imageops::FilterType, GenericImageView};
 use image::{DynamicImage, ImageBuffer, Rgba};
 
@@ -14,8 +13,7 @@ const Y_DOTS: u8 = 4;
 
 pub const DEFAULT_THRESHOLD: u8 = 127;
 
-pub struct BrailleAsciiArtOption<'a> {
-    image_path: &'a str,
+pub struct BrailleAsciiArtOption {
     threshold: u8, // range 0 - 255
     num_cols: u32,
     is_color: bool,
@@ -23,8 +21,8 @@ pub struct BrailleAsciiArtOption<'a> {
 }
 
 pub struct BrailleAsciiArt<'a> {
-    options: BrailleAsciiArtOption<'a>,
-    image: DynamicImage,
+    options: &'a BrailleAsciiArtOption,
+    image: &'a DynamicImage,
 }
 
 trait BrailleDot {
@@ -51,16 +49,9 @@ impl BrailleDot for ImageBuffer<Rgba<u8>, Vec<u8>> {
     }
 }
 
-impl<'a> BrailleAsciiArtOption<'a> {
-    pub fn new(
-        num_cols: u32,
-        image_path: &'a str,
-        threshold: u8,
-        is_color: bool,
-        is_invert: bool,
-    ) -> Self {
+impl BrailleAsciiArtOption {
+    pub fn new(num_cols: u32, threshold: u8, is_color: bool, is_invert: bool) -> Self {
         Self {
-            image_path,
             threshold,
             num_cols,
             is_color,
@@ -69,12 +60,11 @@ impl<'a> BrailleAsciiArtOption<'a> {
     }
 }
 
-impl<'a> UnicodeArtOption<'a> for BrailleAsciiArtOption<'a> {
-    fn new_unicode_art(self) -> Result<Box<dyn UnicodeArt + 'a>, UnicodeArtError> {
-        let image = ImageReader::open(self.image_path)
-            .map_err(|err| UnicodeArtError::from(err))?
-            .decode()
-            .map_err(|err| UnicodeArtError::from(err))?;
+impl UnicodeArtOption for BrailleAsciiArtOption {
+    fn new_unicode_art<'a>(
+        &'a self,
+        image: &'a DynamicImage,
+    ) -> Result<Box<dyn UnicodeArt + 'a>, UnicodeArtError> {
         Ok(Box::new(BrailleAsciiArt {
             options: self,
             image,
@@ -183,13 +173,17 @@ impl<'a> UnicodeArt for BrailleAsciiArt<'a> {
 
 #[cfg(test)]
 mod tests {
+    use image::io::Reader;
+
     use super::*;
     use std::io::BufWriter;
 
     #[test]
     fn test_generate_braille() {
-        let art = BrailleAsciiArtOption::new(40, "tests/support/test_gundam.png", 12, false, false)
-            .new_unicode_art()
+        let image_path = "tests/support/test_gundam.png";
+        let image = Reader::open(image_path);
+        let art = BrailleAsciiArtOption::new(40, 12, false, false)
+            .new_unicode_art(&image.unwrap().decode().unwrap())
             .unwrap();
         let mut buf = BufWriter::new(Vec::new());
         let _ = art.write_all(&mut buf);

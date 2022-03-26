@@ -3,7 +3,6 @@ use super::color::{AnsiColor, ANSI_RESET_ATTRIBUTES};
 use super::error::UnicodeArtError;
 use super::mean::Mean;
 use super::{UnicodeArt, UnicodeArtOption};
-use image::io::Reader as ImageReader;
 use image::{DynamicImage, GenericImageView};
 use std::io::Write;
 
@@ -24,15 +23,14 @@ const ANSI_BG_COLOUR_ESCAPES: [&str; 8] = [
 pub struct ClassicAsciiArtOption<'a> {
     pub(crate) is_color: bool,
     pub(crate) is_invert: bool,
-    pub(crate) image_path: &'a str,
     pub(crate) char_list: &'a str,
     pub(crate) num_cols: Option<u32>,
     pub(crate) num_rows: Option<u32>,
 }
 
 pub struct ClassicAsciiArt<'a> {
-    pub options: ClassicAsciiArtOption<'a>,
-    pub image: DynamicImage,
+    pub options: &'a ClassicAsciiArtOption<'a>,
+    pub image: &'a DynamicImage,
 }
 
 impl<'a> ClassicAsciiArt<'a> {
@@ -111,12 +109,11 @@ impl<'a> ClassicAsciiArt<'a> {
     }
 }
 
-impl<'a> UnicodeArtOption<'a> for ClassicAsciiArtOption<'a> {
-    fn new_unicode_art(self) -> Result<Box<(dyn UnicodeArt + 'a)>, UnicodeArtError> {
-        let image = ImageReader::open(self.image_path)
-            .map_err(|err| UnicodeArtError::from(err))?
-            .decode()
-            .map_err(|err| UnicodeArtError::from(err))?;
+impl UnicodeArtOption for ClassicAsciiArtOption<'static> {
+    fn new_unicode_art<'a>(
+        &'a self,
+        image: &'a DynamicImage,
+    ) -> Result<Box<(dyn UnicodeArt + 'a)>, UnicodeArtError> {
         Ok(Box::new(ClassicAsciiArt {
             options: self,
             image,
@@ -125,14 +122,8 @@ impl<'a> UnicodeArtOption<'a> for ClassicAsciiArtOption<'a> {
 }
 
 impl<'a> ClassicAsciiArtOption<'a> {
-    pub fn new_standard(
-        num_cols: u32,
-        image_path: &'a str,
-        is_color: bool,
-        is_invert: bool,
-    ) -> Self {
+    pub fn new_standard(num_cols: u32, is_color: bool, is_invert: bool) -> Self {
         Self {
-            image_path,
             char_list: CHAR_LIST_STANDARD,
             num_cols: Some(num_cols),
             num_rows: None,
@@ -141,14 +132,8 @@ impl<'a> ClassicAsciiArtOption<'a> {
         }
     }
 
-    pub fn new_level_4(
-        num_cols: u32,
-        image_path: &'a str,
-        is_color: bool,
-        is_invert: bool,
-    ) -> Self {
+    pub fn new_level_4(num_cols: u32, is_color: bool, is_invert: bool) -> Self {
         Self {
-            image_path,
             char_list: CHAR_LIST_LEVELS_4,
             num_cols: Some(num_cols),
             num_rows: None,
@@ -157,14 +142,8 @@ impl<'a> ClassicAsciiArtOption<'a> {
         }
     }
 
-    pub fn new_level_10(
-        num_cols: u32,
-        image_path: &'a str,
-        is_color: bool,
-        is_invert: bool,
-    ) -> Self {
+    pub fn new_level_10(num_cols: u32, is_color: bool, is_invert: bool) -> Self {
         Self {
-            image_path,
             char_list: CHAR_LIST_LEVELS_10,
             num_cols: Some(num_cols),
             num_rows: None,
@@ -173,14 +152,8 @@ impl<'a> ClassicAsciiArtOption<'a> {
         }
     }
 
-    pub fn new_level_19(
-        num_cols: u32,
-        image_path: &'a str,
-        is_color: bool,
-        is_invert: bool,
-    ) -> Self {
+    pub fn new_level_19(num_cols: u32, is_color: bool, is_invert: bool) -> Self {
         Self {
-            image_path,
             char_list: CHAR_LIST_LEVELS_19,
             num_cols: Some(num_cols),
             num_rows: None,
@@ -189,14 +162,8 @@ impl<'a> ClassicAsciiArtOption<'a> {
         }
     }
 
-    pub fn new_level_16(
-        num_cols: u32,
-        image_path: &'a str,
-        is_color: bool,
-        is_invert: bool,
-    ) -> Self {
+    pub fn new_level_16(num_cols: u32, is_color: bool, is_invert: bool) -> Self {
         Self {
-            image_path,
             char_list: CHAR_LIST_LEVELS_16,
             num_cols: Some(num_cols),
             num_rows: None,
@@ -205,14 +172,8 @@ impl<'a> ClassicAsciiArtOption<'a> {
         }
     }
 
-    pub fn new_level_23(
-        num_cols: u32,
-        image_path: &'a str,
-        is_color: bool,
-        is_invert: bool,
-    ) -> Self {
+    pub fn new_level_23(num_cols: u32, is_color: bool, is_invert: bool) -> Self {
         Self {
-            image_path,
             char_list: CHAR_LIST_LEVELS_23,
             num_cols: Some(num_cols),
             num_rows: None,
@@ -233,16 +194,18 @@ impl<'a> UnicodeArt for ClassicAsciiArt<'a> {
 
 #[cfg(test)]
 mod tests {
+    use image::io::Reader as ImageReader;
     use std::io::BufWriter;
 
     use super::*;
 
     #[test]
     fn test_generate_level_19() {
-        let art =
-            ClassicAsciiArtOption::new_level_19(20, "tests/support/test_gundam.png", false, false)
-                .new_unicode_art()
-                .unwrap();
+        let image_path = "tests/support/test_gundam.png";
+        let image = ImageReader::open(image_path);
+        let art = ClassicAsciiArtOption::new_level_19(20, false, false)
+            .new_unicode_art(&image.unwrap().decode().unwrap())
+            .unwrap();
         let mut buf = BufWriter::new(Vec::new());
         let _ = art.write_all(&mut buf);
         let bytes = buf.into_inner().unwrap();
@@ -271,10 +234,11 @@ BBBBBBBBBBBBBBBBBBBB
 
     #[test]
     fn test_generate_standard() {
-        let art =
-            ClassicAsciiArtOption::new_standard(20, "tests/support/test_gundam.png", false, false)
-                .new_unicode_art()
-                .unwrap();
+        let image_path = "tests/support/test_gundam.png";
+        let image = ImageReader::open(image_path);
+        let art = ClassicAsciiArtOption::new_standard(20, false, false)
+            .new_unicode_art(&image.unwrap().decode().unwrap())
+            .unwrap();
         let mut buf = BufWriter::new(Vec::new());
         let _ = art.write_all(&mut buf);
         let bytes = buf.into_inner().unwrap();
@@ -303,10 +267,11 @@ $$$$$@@$$$$$$$$$$$$$
 
     #[test]
     fn test_generate_level_10() {
-        let art =
-            ClassicAsciiArtOption::new_level_10(20, "tests/support/test_gundam.png", false, false)
-                .new_unicode_art()
-                .unwrap();
+        let image_path = "tests/support/test_gundam.png";
+        let image = ImageReader::open(image_path);
+        let art = ClassicAsciiArtOption::new_level_10(20, false, false)
+            .new_unicode_art(&image.unwrap().decode().unwrap())
+            .unwrap();
         let mut buf = BufWriter::new(Vec::new());
         let _ = art.write_all(&mut buf);
         let bytes = buf.into_inner().unwrap();

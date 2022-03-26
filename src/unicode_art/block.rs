@@ -1,33 +1,26 @@
 use super::color::{AnsiColor, ANSI_BG_COLOUR_ESCAPES, ANSI_RESET_ATTRIBUTES};
 use super::error::UnicodeArtError;
 use super::{UnicodeArt, UnicodeArtOption};
-use image::io::Reader as ImageReader;
 use image::{DynamicImage, GenericImageView};
 use std::io::Write;
 
 #[derive(Default)]
-pub struct BlockUnicodeArtOption<'a> {
+pub struct BlockUnicodeArtOption {
     is_color: bool,
-    image_path: &'a str,
     num_cols: u32,
 }
 
-impl<'a> BlockUnicodeArtOption<'a> {
-    pub fn new(num_cols: u32, image_path: &'a str, is_color: bool) -> Self {
-        Self {
-            image_path,
-            num_cols,
-            is_color,
-        }
+impl BlockUnicodeArtOption {
+    pub fn new(num_cols: u32, is_color: bool) -> Self {
+        Self { num_cols, is_color }
     }
 }
 
-impl<'a> UnicodeArtOption<'a> for BlockUnicodeArtOption<'a> {
-    fn new_unicode_art(self) -> Result<Box<dyn UnicodeArt + 'a>, UnicodeArtError> {
-        let image = ImageReader::open(self.image_path)
-            .map_err(|err| UnicodeArtError::from(err))?
-            .decode()
-            .map_err(|err| UnicodeArtError::from(err))?;
+impl UnicodeArtOption for BlockUnicodeArtOption {
+    fn new_unicode_art<'a>(
+        &'a self,
+        image: &'a DynamicImage,
+    ) -> Result<Box<dyn UnicodeArt + 'a>, UnicodeArtError> {
         Ok(Box::new(BlockUnicodeArt {
             options: self,
             image,
@@ -36,8 +29,8 @@ impl<'a> UnicodeArtOption<'a> for BlockUnicodeArtOption<'a> {
 }
 
 pub struct BlockUnicodeArt<'a> {
-    options: BlockUnicodeArtOption<'a>,
-    image: DynamicImage,
+    options: &'a BlockUnicodeArtOption,
+    image: &'a DynamicImage,
 }
 
 impl<'a> UnicodeArt for BlockUnicodeArt<'a> {
@@ -75,14 +68,17 @@ impl<'a> UnicodeArt for BlockUnicodeArt<'a> {
 
 #[cfg(test)]
 mod tests {
+    use image::io::Reader;
     use std::io::BufWriter;
 
     use super::*;
 
     #[test]
     fn test_generate_level_19() {
-        let art = BlockUnicodeArtOption::new(20, "tests/support/test_gundam.png", false)
-            .new_unicode_art()
+        let image_path = "tests/support/test_gundam.png";
+        let image = Reader::open(image_path).unwrap();
+        let art = BlockUnicodeArtOption::new(20, false)
+            .new_unicode_art(&image.decode().unwrap())
             .unwrap();
         let mut buf = BufWriter::new(Vec::new());
         let _ = art.write_all(&mut buf);
