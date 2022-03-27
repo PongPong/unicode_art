@@ -79,11 +79,11 @@ mod tests {
     use std::io::BufWriter;
 
     #[test]
-    fn test_generate_madel() {
+    fn test_generate_madel() -> Result<(), UnicodeArtError> {
         let image = DynamicImage::ImageRgb8(RgbImage::new(1, 1));
-        let art = MandelAsciiArtOption {}.new_unicode_art(&image).unwrap();
+        let art = MandelAsciiArtOption {}.new_unicode_art(&image)?;
         let mut buf = BufWriter::new(Vec::new());
-        let _ = art.write_all(&mut buf);
+        art.write_all(&mut buf)?;
         let bytes = buf.into_inner().unwrap();
         let actual = String::from_utf8(bytes).unwrap();
         assert_eq!(
@@ -124,5 +124,6 @@ mod tests {
 "##########################,
             actual
         );
+        Ok(())
     }
 }

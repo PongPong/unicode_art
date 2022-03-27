@@ -62,11 +62,6 @@ lazy_static! {
             .help("Insert color")
             .use_value_delimiter(false)
     };
-//  let mut input = if arg == "--" {
-//     Input::Stdin(io::stdin())
-// } else {
-//     Input::File(fs::File::open(&arg).expect("I should handle that.."))
-// };
     static ref ARG_STDIN: Arg<'static> = {
         Arg::new("STDIN")
             .long("stdin")
